@@ -9,7 +9,8 @@ export default class Player {
     health: number;
     position: Vector2;
     reroll: number;
-    cost: number;
+    energy: number;
+    isBlock: boolean = false;
 
     currentCards: number[] = [];
     chosenCards: number[] = [];
@@ -25,7 +26,7 @@ export default class Player {
     resetStats() {
         this.health = this.character.maxHealth;
         this.reroll = 1;
-        this.cost = 1;
+        this.energy = 1;
     }
 
 

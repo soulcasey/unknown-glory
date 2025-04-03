@@ -14,14 +14,14 @@ export class Card {
     readonly type: CardType;
     readonly value: number;
     readonly cost: number;
-    readonly zone: Vector2[];
+    readonly zones: Vector2[];
 
     constructor(index: number, name: string, type: CardType, value: number, cost: number, zone: Vector2[]) {
         this.index = index;
         this.name = name
         this.type = type;
         this.value = value;
-        this.zone = zone;
+        this.zones = zone;
         this.cost = cost;
     }
 }
