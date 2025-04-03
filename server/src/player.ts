@@ -1,20 +1,33 @@
-import { Character } from "./character"; // Import Character class
+import { Character, CharacterType } from "./character"; // Import Character class
 import { Vector2 } from "./define";
 
-export class Player {
+export default class Player {
     readonly id: string;
+    name: string;
+    room: string;
     character: Character;
     health: number;
     position: Vector2;
+    reroll: number;
+    cost: number;
 
-    constructor(id: string) {
+    currentCards: number[] = [];
+    chosenCards: number[] = [];
+
+    constructor(id: string, name: string, type: CharacterType) {
         this.id = id;
+        this.name = name;
+        this.character = Character.createCharacter(type)
+        
+        this.resetStats()
     }
 
-    chooseCharacter(character: Character) {
-        this.character = character;
-        this.health = character.maxHealth;
+    resetStats() {
+        this.health = this.character.maxHealth;
+        this.reroll = 1;
+        this.cost = 1;
     }
+
 
     takeDamage(amount: number) {
         this.health -= amount;
