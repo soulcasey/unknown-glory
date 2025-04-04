@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { CharacterType, JoinRoomData } from "./dto";
+import CardSelection from "./components/CardSelection";
 
 const socket = io("http://localhost:3000");
 
 export default function Game() {
     const [roomId, setRoomId] = useState("");
     const [playerName, setPlayerName] = useState("");
-    const [characterType, setCharacterType] = useState<CharacterType>(CharacterType.Archer);
+    const [characterType, setCharacterType] = useState<CharacterType>(CharacterType.Knight);
     const [joined, setJoined] = useState(false);
     const [error, setError] = useState("");
+    const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
 
     useEffect(() => {
         // Listen for server responses
@@ -34,7 +36,7 @@ export default function Game() {
         };
     }, []);
 
-     const handleJoinRoom = () => {
+    const handleJoinRoom = () => {
         if (roomId.trim() && playerName.trim()) {
             setError(""); // Clear error message when attempting to join
 
@@ -52,6 +54,20 @@ export default function Game() {
 
     return (
         <div className="flex flex-col items-center justify-center gap-6 p-6 bg-gray-800 min-h-screen w-full text-white">
+            {/* Button to open the CardSelection */}
+            <button
+                onClick = {() => setShowCardSelection(true)}
+                className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
+            >
+                Open CardSelection
+            </button>
+
+            {/* CardSelection content */}
+            {showCardSelection && <CardSelection
+                cards = {["Hi", "Bye", "Cya", "123"]}
+                onClose = {() => setShowCardSelection(false)}
+            />}
+
             {!joined ? (
                 <div className="flex flex-col items-center gap-4">
                     <input
@@ -59,19 +75,21 @@ export default function Game() {
                         placeholder="Enter Room ID"
                         value={roomId}
                         onChange={(e) => setRoomId(e.target.value)}
-                        className="p-2 text-black rounded-md border border-gray-400"
+                        className="p-2 text-white bg-gray-700 rounded-md border border-gray-400"
                     />
+
                     <input
                         type="text"
                         placeholder="Enter Your Name"
                         value={playerName}
                         onChange={(e) => setPlayerName(e.target.value)}
-                        className="p-2 text-black rounded-md border border-gray-400"
+                        className="p-2 text-white bg-gray-700 rounded-md border border-gray-400"
                     />
+
                     <select
                         value={characterType}
                         onChange={(e) => setCharacterType(e.target.value as CharacterType)}
-                        className="p-2 text-black rounded-md border border-gray-400"
+                        className="p-2 text-white rounded-md border bg-gray-700 border-gray-400"
                     >
                         {Object.values(CharacterType).map((type) => (
                             <option key={type} value={type}>
