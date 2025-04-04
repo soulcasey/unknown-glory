@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { CharacterType, JoinRoomData } from "./dto";
 import CardSelection from "./components/CardSelection";
+import { Vector2 } from "./dto";
 
 const socket = io("http://localhost:3000");
 
@@ -13,8 +14,7 @@ export default function Game() {
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
     const [cards, setCards] = useState<string[]>([]);
-
-    const [charPos, setCharPos] = useState({ x: 0, y: 0 });
+    const [charPos, setCharPos] = useState<Vector2>({ x: 0, y: 0 });
 
     useEffect(() => {
         // Listen for server responses
@@ -41,7 +41,7 @@ export default function Game() {
             socket.off("roomFull");
             socket.off("nameTaken");
             socket.off("joinedRoom");
-            socket.off("showCards");
+            socket.off("cards");
         };
     }, []);
 
@@ -141,18 +141,23 @@ export default function Game() {
                     >
                         <div className="relative" style={{ width: "min(95vw, 1500px)", aspectRatio: "7 / 3" }}>
                             <div className="absolute inset-0 grid grid-cols-7 grid-rows-3 gap-2">
-                                {[...Array(21)].map((_, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex items-center justify-center text-white bg-gray-600"
-                                        style={{
-                                            width: "100%",
-                                            aspectRatio: "1 / 1",
-                                        }}
-                                    >
-                                        {index + 1}
-                                    </div>
-                                ))}
+                                {[...Array(21)].map((_, index) => {
+                                    const col = index % 7;
+                                    const row = 2 - Math.floor(index / 7); // invert Y-axis (bottom row = 0)
+
+                                    return (
+                                        <div
+                                            key={`${col}-${row}`}
+                                            className="flex items-start justify-center pt-1 text-white bg-gray-600 text-sm"
+                                            style={{
+                                                width: "100%",
+                                                aspectRatio: "1 / 1",
+                                            }}
+                                        >
+                                            {col} , {row}
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {/* 🧍 Animated Character */}

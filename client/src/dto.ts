@@ -1,4 +1,3 @@
-// Enum for the type of card
 export enum CharacterType {
     Knight = "Knight",
     Archer = "Archer",
@@ -9,4 +8,9 @@ export interface JoinRoomData {
     roomId: string;
     name: string;
     characterType: CharacterType;
+}
+
+export interface Vector2 {
+    x: number;
+    y: number;
 }
