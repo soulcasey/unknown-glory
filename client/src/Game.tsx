@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { CharacterType, JoinRoomData } from "./dto";
 import CardSelection from "./components/CardSelection";
-import { Vector2 } from "./dto";
+import { Vector2, PlayersData } from "./dto";
 
 const socket = io("http://localhost:3000");
 
@@ -34,6 +34,10 @@ export default function Game() {
         socket.on("cards", ({ cards, reroll }: { cards: string[]; reroll: number }) => {
             setCards(cards);
             setShowCardSelection(true);
+        });
+
+        socket.on("updatePlayers", (playersData: PlayersData)=> {
+            
         });
 
         // Cleanup event listeners on unmount

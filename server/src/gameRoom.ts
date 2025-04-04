@@ -1,8 +1,8 @@
 import { Server, Socket } from "socket.io";
 import Player from "./player";
-import { Knight, Archer, Rogue, CharacterType, Character } from "./character";
+import { Knight, Archer, Rogue, Character } from "./character";
 import { Card, CardType } from "./card";
-import { Vector2, MoveData, AttackData, BlockData, PlayersData } from "./dto";
+import { Vector2, MoveData, AttackData, BlockData, PlayersData, CharacterType } from "./dto";
 import { blob } from "stream/consumers";
 
 enum GameStep {

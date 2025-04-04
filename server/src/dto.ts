@@ -1,5 +1,8 @@
-import Player from "./player"
-import { Character, CharacterType } from "./character";
+export enum CharacterType {
+    Knight = "Knight",
+    Archer = "Archer",
+    Rogue = "Rogue",
+}
 
 export interface Vector2 {
     x: number;

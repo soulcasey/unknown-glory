@@ -1,11 +1,5 @@
 import { Card, CardType } from "./card";
-
-// Enum for the type of card
-export enum CharacterType {
-    Knight = "Knight",
-    Archer = "Archer",
-    Rogue = "Rogue",
-}
+import { CharacterType } from "./dto";
 
 // Abstract Character class
 export abstract class Character {

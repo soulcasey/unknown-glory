@@ -1,7 +1,6 @@
 import { Server, Socket } from "socket.io";
 import GameRoom from "./gameRoom";
-import { CharacterType } from "./character";
-import { JoinRoomData } from "./dto";
+import { JoinRoomData, CharacterType } from "./dto";
 
 export default class GameManager {
     private io: Server;
