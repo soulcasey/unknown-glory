@@ -12,7 +12,9 @@ export default function Game() {
     const [joined, setJoined] = useState(false);
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
-    const [cards, setCards] = useState<string[]>([]); 
+    const [cards, setCards] = useState<string[]>([]);
+
+    const [charPos, setCharPos] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
         // Listen for server responses
@@ -41,6 +43,18 @@ export default function Game() {
             socket.off("joinedRoom");
             socket.off("showCards");
         };
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === "Space") {
+                const newX = Math.floor(Math.random() * 7); // cols
+                const newY = Math.floor(Math.random() * 3); // rows
+                setCharPos({ x: newX, y: newY });
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
     const handleJoinRoom = () => {
@@ -116,26 +130,51 @@ export default function Game() {
                 <>
                     <h2 className="text-xl">Room: {roomId}</h2>
                     <h3 className="text-lg">Player: {playerName} ({characterType})</h3>
-                    {/* 7x3 Fixed Grid with Responsive Scaling */}
+
+                    {/* Grid Container */}
                     <div
-                        className="grid grid-cols-7 grid-rows-3 gap-2"
+                        className="relative"
                         style={{
-                            width: "min(95vw, 1500px)", // Scales but stops at 1500px max width
-                            height: "auto",             // Adjusts height automatically
+                            width: "min(95vw, 1500px)",
+                            aspectRatio: "7 / 3",
                         }}
                     >
-                        {[...Array(21)].map((_, index) => (
+                        <div className="relative" style={{ width: "min(95vw, 1500px)", aspectRatio: "7 / 3" }}>
+                            <div className="absolute inset-0 grid grid-cols-7 grid-rows-3 gap-2">
+                                {[...Array(21)].map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center justify-center text-white bg-gray-600"
+                                        style={{
+                                            width: "100%",
+                                            aspectRatio: "1 / 1",
+                                        }}
+                                    >
+                                        {index + 1}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* 🧍 Animated Character */}
                             <div
-                                key={index}
-                                className="flex items-center justify-center text-white bg-gray-600"
+                                className="absolute transition-transform duration-500 ease-in-out"
                                 style={{
-                                    width: "100%",         // Ensures equal distribution
-                                    aspectRatio: "1 / 1",  // Maintains square shape
+                                    width: "calc((100% - 6 * 0.5rem) / 7)",
+                                    aspectRatio: "1 / 1",
+                                    transform: `translate(
+                                        calc(${charPos.x * 100}% + ${charPos.x * 0.5}rem),
+                                        calc(${(2 - charPos.y) * 100}% + ${(2 - charPos.y) * 0.5}rem) 
+                                    )`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    zIndex: 10,
+                                    fontSize: 60,
                                 }}
                             >
-                                {index + 1}
+                                ⚔️
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </>
             )}
