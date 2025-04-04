@@ -6,6 +6,9 @@ interface CardSelectionProps {
 export default function CardSelection({ cards, onClose }: CardSelectionProps) {
     return (
         <>
+            {/* Popup overlay */}
+            <div className="fixed top-0 left-0 w-full h-full bg-black opacity-50" />
+
             {/* Popup content */}
             <div
                 className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-md w-[90vw] h-[90vh] bg-opacity-80"

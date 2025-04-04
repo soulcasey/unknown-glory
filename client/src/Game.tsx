@@ -3,6 +3,7 @@ import io from "socket.io-client";
 import { CharacterType, JoinRoomData } from "./dto";
 import CardSelection from "./components/CardSelection";
 import { Vector2, PlayersData } from "./dto";
+import Character from "./components/Character";
 
 const socket = io("http://localhost:3000");
 
@@ -14,7 +15,7 @@ export default function Game() {
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
     const [cards, setCards] = useState<string[]>([]);
-    const [charPos, setCharPos] = useState<Vector2>({ x: 0, y: 0 });
+    const [players, setPlayers] = useState<PlayersData>({ players: [] });
 
     useEffect(() => {
         // Listen for server responses
@@ -37,7 +38,7 @@ export default function Game() {
         });
 
         socket.on("updatePlayers", (playersData: PlayersData)=> {
-            
+            setPlayers(playersData);
         });
 
         // Cleanup event listeners on unmount
@@ -46,19 +47,8 @@ export default function Game() {
             socket.off("nameTaken");
             socket.off("joinedRoom");
             socket.off("cards");
+            socket.off("updatePlayers");
         };
-    }, []);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === "Space") {
-                const newX = Math.floor(Math.random() * 7); // cols
-                const newY = Math.floor(Math.random() * 3); // rows
-                setCharPos({ x: newX, y: newY });
-            }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
     const handleJoinRoom = () => {
@@ -165,24 +155,17 @@ export default function Game() {
                             </div>
 
                             {/* 🧍 Animated Character */}
-                            <div
-                                className="absolute transition-transform duration-500 ease-in-out"
-                                style={{
-                                    width: "calc((100% - 6 * 0.5rem) / 7)",
-                                    aspectRatio: "1 / 1",
-                                    transform: `translate(
-                                        calc(${charPos.x * 100}% + ${charPos.x * 0.5}rem),
-                                        calc(${(2 - charPos.y) * 100}% + ${(2 - charPos.y) * 0.5}rem) 
-                                    )`,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    zIndex: 10,
-                                    fontSize: 60,
-                                }}
-                            >
-                                ⚔️
-                            </div>
+                            {players.players.map((player) => (
+                                <Character
+                                    key={player.name}
+                                    type={player.characterType}
+                                    position={player.position}
+                                    name={player.name}
+                                    health={player.health}
+                                    energy={player.energy}
+                                    block={player.block}
+                                />
+                            ))}
                         </div>
                     </div>
                 </>

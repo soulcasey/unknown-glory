@@ -1,5 +1,5 @@
-import { Character, CharacterType } from "./character"; // Import Character class
-import { Vector2 } from "./dto";
+import { Character } from "./character"; // Import Character class
+import { Vector2, CharacterType } from "./dto";
 
 export default class Player {
     readonly id: string;

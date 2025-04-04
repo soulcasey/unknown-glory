@@ -49,35 +49,36 @@ export default class GameRoom {
 
     handleDisconnect(socket: Socket) {
         this.players = this.players.filter(player => player.id !== socket.id);
-        this.players.forEach(player =>
+        this.players.forEach((player, index) => {
+            
             player.resetStats()
-        );
+            player.position = index === 0 ? this.position1 : this.position2;
+        });
+
         this.step = GameStep.Init;
     }
 
     handleJoinRoom(io: Server, socket: Socket, name: string, type: CharacterType) {
         if (this.step !== GameStep.Init) return;
-        const player = new Player(socket.id, name, type);
-        this.players.push(player);
-
+        const newPlayer = new Player(socket.id, name, type);
+        newPlayer.position = this.players.length === 0 ? this.position1 : this.position2
+        this.players.push(newPlayer);
         socket.join(this.roomId);
 
-        io.in(this.roomId).emit("joinedRoom", { player: player.name });
+        io.in(this.roomId).emit("joinedRoom", { player: newPlayer.name });
+        this.updatePlayers(io)
 
         if (this.players.length === this.maxPlayerCount) {
+            io.in(this.roomId).emit("unwait", { step: this.step });
+
             this.step = GameStep.Select;
             io.in(this.roomId).emit("gameStep", { step: this.step });
 
-            this.players.forEach((player, index) => {
-                player.position = index === 0 ? this.position1 : this.position2;
-            });
-
-            this.updatePlayers(io)
             this.setPriority(io);
             this.players.forEach(player => this.sendRandomCards(io, player));
         }
         else {
-            io.to(player.id).emit("wait");
+            io.to(newPlayer.id).emit("wait");
         }
     }
 
