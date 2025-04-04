@@ -12,6 +12,7 @@ export default function Game() {
     const [joined, setJoined] = useState(false);
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
+    const [cards, setCards] = useState<string[]>([]); 
 
     useEffect(() => {
         // Listen for server responses
@@ -28,11 +29,17 @@ export default function Game() {
             setJoined(true);
         });
 
+        socket.on("cards", ({ cards, reroll }: { cards: string[]; reroll: number }) => {
+            setCards(cards);
+            setShowCardSelection(true);
+        });
+
         // Cleanup event listeners on unmount
         return () => {
             socket.off("roomFull");
             socket.off("nameTaken");
             socket.off("joinedRoom");
+            socket.off("showCards");
         };
     }, []);
 
@@ -56,7 +63,7 @@ export default function Game() {
         <div className="flex flex-col items-center justify-center gap-6 p-6 bg-gray-800 min-h-screen w-full text-white">
             {/* Button to open the CardSelection */}
             <button
-                onClick = {() => setShowCardSelection(true)}
+                onClick = { () => setShowCardSelection(true) }
                 className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
             >
                 Open CardSelection
@@ -64,8 +71,8 @@ export default function Game() {
 
             {/* CardSelection content */}
             {showCardSelection && <CardSelection
-                cards = {["Hi", "Bye", "Cya", "123"]}
-                onClose = {() => setShowCardSelection(false)}
+                cards = { cards }
+                onClose = { () => setShowCardSelection(false) }
             />}
 
             {!joined ? (

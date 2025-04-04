@@ -48,7 +48,11 @@ export default class GameRoom {
     }
 
     handleDisconnect(socket: Socket) {
-        // Handle player disconnection if needed
+        this.players = this.players.filter(player => player.id !== socket.id);
+        this.players.forEach(player =>
+            player.resetStats()
+        );
+        this.step = GameStep.Init;
     }
 
     handleJoinRoom(io: Server, socket: Socket, name: string, type: CharacterType) {
@@ -151,7 +155,7 @@ export default class GameRoom {
             availableIndices.splice(randomIndex, 1); // Remove chosen index to avoid duplicates
         }
 
-        io.to(player.id).emit("card", {
+        io.to(player.id).emit("cards", {
             cards: player.currentCards,
             reroll: player.reroll
         });

@@ -49,14 +49,15 @@ export default class GameManager {
     }
 
     private handleDisconnect(socket: Socket) {
-
         console.log(socket.id + " disconnected");
-
-        const room = this.getRoom(socket)
-
+    
+        const room = this.getRoom(socket);
+    
         if (!room) return;
-
+    
         room.handleDisconnect(socket);
+        this.playerRoomId.delete(socket.id);
+    
         if (room.getPlayers().length === 0) {
             this.rooms.delete(room.getRoomId());
         }
