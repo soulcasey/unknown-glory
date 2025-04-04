@@ -1,5 +1,5 @@
 import { Character, CharacterType } from "./character"; // Import Character class
-import { Vector2 } from "./define";
+import { Vector2 } from "./dto";
 
 export default class Player {
     readonly id: string;
@@ -10,10 +10,10 @@ export default class Player {
     position: Vector2;
     reroll: number;
     energy: number;
-    isBlock: boolean = false;
+    block: number = 0;
 
-    currentCards: number[] = [];
-    chosenCards: number[] = [];
+    currentCards: string[] = [];
+    chosenCards: string[] = [];
 
     constructor(id: string, name: string, type: CharacterType) {
         this.id = id;
@@ -27,8 +27,11 @@ export default class Player {
         this.health = this.character.maxHealth;
         this.reroll = 1;
         this.energy = 1;
-    }
+        this.block = 0;
 
+        this.currentCards = []
+        this.chosenCards = []
+    }
 
     takeDamage(amount: number) {
         this.health -= amount;

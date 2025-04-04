@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 import GameRoom from "./gameRoom";
 import { CharacterType } from "./character";
+import { JoinRoomData } from "./dto";
 
 export default class GameManager {
     private io: Server;
@@ -18,11 +19,11 @@ export default class GameManager {
 
             console.log(socket.id + " connected");
 
-            socket.on("joinRoom", ({ roomId, name, type }) => this.handleJoinRoom(socket, roomId, name, type));
+            socket.on("joinRoom", (data: JoinRoomData) => this.handleJoinRoom(socket, data.roomId, data.name, data.type));
             socket.on("disconnect", () => this.handleDisconnect(socket));
 
-            socket.on("selectCards", (cards : number[]) => this.getRoom(socket)?.handleSelectCards(this.io, socket, cards));
-            socket.on("rerollCards", (x: number) => this.getRoom(socket)?.handleRerollCards(this.io, socket));
+            socket.on("selectCards", (cards: string[]) => this.getRoom(socket)?.handleSelectCards(this.io, socket, cards));
+            socket.on("rerollCards", () => this.getRoom(socket)?.handleRerollCards(this.io, socket));
         });
     }
 

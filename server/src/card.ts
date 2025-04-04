@@ -1,4 +1,4 @@
-import { Vector2 } from "./define";
+import { Vector2 } from "./dto";
 
 // Enum for the type of card
 export enum CardType {
@@ -9,15 +9,15 @@ export enum CardType {
 
 // Card class definition
 export class Card {
-    readonly index: number;
+    readonly key: string;
     readonly name: string
     readonly type: CardType;
     readonly value: number;
     readonly cost: number;
     readonly zones: Vector2[];
 
-    constructor(index: number, name: string, type: CardType, value: number, cost: number, zone: Vector2[]) {
-        this.index = index;
+    constructor(key: string, name: string, type: CardType, value: number, cost: number, zone: Vector2[]) {
+        this.key = key;
         this.name = name
         this.type = type;
         this.value = value;

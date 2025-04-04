@@ -2,8 +2,8 @@ import { Server, Socket } from "socket.io";
 import Player from "./player";
 import { Knight, Archer, Rogue, CharacterType, Character } from "./character";
 import { Card, CardType } from "./card";
-import { Console } from "console";
-import { Vector2 } from "./define";
+import { Vector2, MoveData, AttackData, BlockData, PlayersData } from "./dto";
+import { blob } from "stream/consumers";
 
 enum GameStep {
     Init,
@@ -28,7 +28,10 @@ export default class GameRoom {
     private readonly selectCardCount = 3;
 
     private readonly maxPlayerCount = 2;
-    
+
+    private readonly maxEnergy = 4;
+    private readonly maxReroll = 2;
+
 
     private priorityIndex: number;
 
@@ -36,54 +39,66 @@ export default class GameRoom {
         this.roomId = roomId;
     }
 
-    getRoomId() : string {
+    getRoomId(): string {
         return this.roomId;
     }
 
-    getPlayers() : Player[] {
+    getPlayers(): Player[] {
         return this.players;
     }
-    
-    handleDisconnect(socket: Socket) {
 
+    handleDisconnect(socket: Socket) {
+        // Handle player disconnection if needed
     }
 
     handleJoinRoom(io: Server, socket: Socket, name: string, type: CharacterType) {
-        if (this.step != GameStep.Init) return;
-        this.players.push(new Player(socket.id, name, type));
+        if (this.step !== GameStep.Init) return;
+        const player = new Player(socket.id, name, type);
+        this.players.push(player);
 
         socket.join(this.roomId);
-    
-        io.to(this.roomId).emit("joinedRoom", { name: name, });
 
-        // Once max players join, randomly select priority player and cards
+        io.in(this.roomId).emit("joinedRoom", { player: player.name });
+
         if (this.players.length === this.maxPlayerCount) {
             this.step = GameStep.Select;
-            io.to(this.roomId).emit("gameStep", { step: this.step });
+            io.in(this.roomId).emit("gameStep", { step: this.step });
 
-            // Initialize position
             this.players.forEach((player, index) => {
                 player.position = index === 0 ? this.position1 : this.position2;
             });
 
             this.updatePlayers(io)
             this.setPriority(io);
-            this.players.forEach((player) => {
-                this.sendRandomCards(io, player);
-            });
+            this.players.forEach(player => this.sendRandomCards(io, player));
+        }
+        else {
+            io.to(player.id).emit("wait");
         }
     }
 
-    handleSelectCards(io: Server, socket: Socket, cards: number[]) {
-        if (this.step != GameStep.Select) return;
-        if (cards.length != this.selectCardCount) return;
+    handleSelectCards(io: Server, socket: Socket, cards: string[]) {
+        if (this.step !== GameStep.Select) return;
+        if (cards.length !== this.selectCardCount) return;
 
         const player = this.getPlayer(socket);
-        player.chosenCards = cards.map(i => player.currentCards[i]);
 
-        if (this.players.filter(p => p.chosenCards.length == 3).length === this.players.length) {
+        if (player.chosenCards.length === this.selectCardCount) return; // If cards are already chosen
+
+        const currentCards = [...player.currentCards];
+
+        for (let i = 0; i < cards.length; i ++) {
+            const cardKey = cards[i];
+            const index = currentCards.indexOf(cardKey);
+            if (index === -1) return;
+            currentCards.splice(index, 1);
+        }
+
+        player.chosenCards = cards;
+
+        if (this.players.every(p => p.chosenCards.length === this.selectCardCount)) {
             this.step = GameStep.Execute;
-            this.executeCards();
+            this.executeCards(io);
         }
         else {
             io.to(player.id).emit("wait");
@@ -91,10 +106,10 @@ export default class GameRoom {
     }
 
     handleRerollCards(io: Server, socket: Socket) {
-        if (this.step != GameStep.Select) return;
+        if (this.step !== GameStep.Select) return;
 
         const player = this.getPlayer(socket);
-        if (player.reroll === 0) {
+        if (player.reroll < 1) {
             return;
         }
 
@@ -104,22 +119,25 @@ export default class GameRoom {
     }
 
     private updatePlayers(io: Server) {
-        const players = this.players.map(player => ({
-            name: player.name,
-            characterType: player.character.type,
-            position: player.position,
-            health: player.health,
-            isBlock: player.isBlock
-        }));
+        const playersData: PlayersData = {
+            players: this.players.map(player => ({
+                name: player.name,
+                characterType: player.character.type,
+                position: player.position,
+                health: player.health,
+                reroll: player.reroll,
+                energy: player.energy,
+                block: player.block,
+            }))
+        };
 
-        io.emit("updatePlayers", players);
+        io.in(this.roomId).emit("updatePlayers", playersData);
     }
 
     private setPriority(io: Server) {
-        this.priorityIndex = Math.round(Math.random());
-        const priorityPlayer = this.players[Math.round(Math.random())].name;
-
-        io.emit("setPriority", priorityPlayer);
+        this.priorityIndex = Math.floor(Math.random() * this.players.length);
+        const priorityPlayer = this.players[this.priorityIndex].name;
+        io.in(this.roomId).emit("setPriority", { priorityPlayer });
     }
 
     private sendRandomCards(io: Server, player: Player) {
@@ -128,7 +146,8 @@ export default class GameRoom {
 
         while (player.currentCards.length < this.randomCardCount) {
             const randomIndex = Math.floor(Math.random() * availableIndices.length);
-            player.currentCards.push(availableIndices[randomIndex]);
+            const card = player.character.cards[availableIndices[randomIndex]]
+            player.currentCards.push(card.key);
             availableIndices.splice(randomIndex, 1); // Remove chosen index to avoid duplicates
         }
 
@@ -139,71 +158,154 @@ export default class GameRoom {
     }
 
     // If multiple opponent feature gets implemented, directional casting needs to be considered
-    private executeCards() {
-        let playerIndex = this.priorityIndex
+    private executeCards(io: Server) {
+        let playerIndex = this.priorityIndex;
         let opponentIndex = playerIndex === 1 ? 0 : 1;
 
         while (true) {
             const player = this.players[playerIndex];
-            const cardIndex = player.chosenCards.shift()
-            if (!cardIndex) break;
+            const cardKey = player.chosenCards.shift()
+            if (cardKey === undefined) break;
 
             const opponent = this.players[opponentIndex];
 
-            const card = player.character.cards[cardIndex];
+            const card = player.character.cards.find(card => card.key === cardKey);
+            const hasEnergy = player.energy >= card.cost;
+
+            if (hasEnergy === true) {
+                player.energy -= card.cost;
+            }
+
 
             switch (card.type) {
                 case CardType.Move:
-                    card.zones.forEach(zone => {
-                        player.position.x = Math.max(0, Math.min(this.xSize - 1, player.position.x + zone.x));
-                        player.position.y = Math.max(0, Math.min(this.ySize - 1, player.position.y + zone.y));
-                    });
+                    if (hasEnergy === true) {
+                        card.zones.forEach(zone => {
+                            player.position.x = Math.max(0, Math.min(this.xSize - 1, player.position.x + zone.x));
+                            player.position.y = Math.max(0, Math.min(this.ySize - 1, player.position.y + zone.y));
+                        });
+                    }
+
+                    const moveData: MoveData = {
+                        cardKey: cardKey,
+                        cardName: card.name,
+                        player: player.name,
+                        newPosition: player.position,
+                        hasEnergy: hasEnergy,
+                        currentEnergy: player.energy
+                    }
+
+                    io.in(this.roomId).emit("moveData", { moveData });
+
                     break;
 
                 case CardType.Block:
-                    player.isBlock = true;
+                    if (hasEnergy === true) {
+                        player.block = card.value;
+                    }
+
+                    const blockData: BlockData = {
+                        cardKey: cardKey,
+                        cardName: card.name,
+                        player: player.name,
+                        block: player.block,
+                        hasEnergy: hasEnergy,
+                        currentEnergy: player.energy
+                    }
+
+                    io.in(this.roomId).emit("blockData", { blockData });
+
                     break;
 
                 case CardType.Attack:
-                    const hitZones = new Set<Vector2>();
-                    const direction = opponent.position.x >= player.position.x ? 1 : -1;
-                    
-                    card.zones.forEach(zone => {
-                        const hitZone = {
-                            x: player.position.x + zone.x * direction,
-                            y: player.position.y + zone.y,
-                        }
+                    const hitZones: Vector2[] = [];
+                
+                    if (hasEnergy === true) {
 
-                        if (hitZone.x >= 0 && hitZone.x < this.xSize && hitZone.y >= 0 && hitZone.y < this.ySize) {
-                            hitZones.add(hitZone);
-                        }
-                    });
+                        const direction = opponent.position.x >= player.position.x ? 1 : -1;
 
-                    if (hitZones.has(opponent.position)) {
-                        opponent.health = Math.max(opponent.health - card.value, 0);
+                        card.zones.forEach(zone => {
+                            const hitZone = {
+                                x: player.position.x + zone.x * direction,
+                                y: player.position.y + zone.y,
+                            }
+
+                            if (hitZone.x >= 0 && hitZone.x < this.xSize && hitZone.y >= 0 && hitZone.y < this.ySize) {
+                            hitZones.push(hitZone);
+                            }
+                        });
                     }
+
+                    let isHit = hitZones.some(zone => zone.x === opponent.position.x && zone.y === opponent.position.y);
+
+                    if (isHit === true) {
+                        let damage = card.value;
+                        if (opponent.block > 0) {
+                            damage = Math.max(0, damage - opponent.block);
+                            opponent.block = 0;
+                        }    
+
+                        opponent.health = Math.max(0, opponent.health - damage);
+                    }
+                    
+                    
+                    const attackData: AttackData = {
+                        cardKey: cardKey,
+                        cardName: card.name,
+                        player: player.name,
+                        hitZones: hitZones,
+                        opponent: isHit ? {
+                            name: opponent.name,
+                            health: opponent.health,
+                            block: opponent.block,
+                        } : undefined,
+                        hasEnergy: hasEnergy,
+                        currentEnergy: player.energy
+                    }
+
+                    io.in(this.roomId).emit("attackData", { attackData });
+
                     break;
             }
 
             if (player.health <= 0 || opponent.health <= 0) {
                 break;
             }
+
+            [playerIndex, opponentIndex] = [opponentIndex, playerIndex];
         }
 
-        this.step = GameStep.Result;
-        this.evaluateResults();
+        this.evaluateResults(io);
     }
 
-    private evaluateResults() {
-        // const alivePlayers = this.players.filter(p => p.health > 0);
+    private evaluateResults(io: Server) {
+        const alivePlayers = this.players.filter(player => player.health > 0);
+        // const deadPlayers = this.players.filter(player => player.health <= 0);
 
-        // if (alivePlayers.length < 2) {
-        //     this.io.to(this.roomId).emit("gameOver", { winner: alivePlayers[0]?.name || "None" });
-        //     this.resetGame();
-        // } else {
-        //     this.step = GameStep.End;
-        //     this.io.to(this.roomId).emit("gameStep", { step: this.step });
-        // }
+        if (alivePlayers.length <= 1) {
+            this.step = GameStep.End;
+            io.in(this.roomId).emit("end", { winner: alivePlayers.map(player => player.name) });
+        }
+        else {
+            this.step = GameStep.Result;
+
+            alivePlayers.forEach(player => {
+                if (player.energy <= this.maxEnergy) {
+                    player.energy++;
+                }
+                
+                if (player.reroll <= this.maxReroll) {
+                    player.reroll += 0.5;
+                }
+            })
+
+
+            this.step = GameStep.Select;
+            
+            this.updatePlayers(io)
+            this.setPriority(io);
+            this.players.forEach(player => this.sendRandomCards(io, player));
+        }
     }
 
     private resetGame() {
@@ -220,7 +322,7 @@ export default class GameRoom {
     private getPlayer(socket: Socket) : Player {
         const player = this.players.find(p => p.id === socket.id);
         
-        if (!player) {
+        if (player === undefined) {
             console.log("ERROR! Cannot find player: " + socket.id);
         }
 
