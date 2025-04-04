@@ -69,7 +69,7 @@ export default class GameRoom {
         this.updatePlayers(io)
 
         if (this.players.length === this.maxPlayerCount) {
-            io.in(this.roomId).emit("unwait", { step: this.step });
+            io.in(this.roomId).emit("unwait");
 
             this.step = GameStep.Select;
             io.in(this.roomId).emit("gameStep", { step: this.step });
@@ -102,6 +102,7 @@ export default class GameRoom {
         player.chosenCards = cards;
 
         if (this.players.every(p => p.chosenCards.length === this.selectCardCount)) {
+            io.in(this.roomId).emit("unwait");
             this.step = GameStep.Execute;
             this.executeCards(io);
         }

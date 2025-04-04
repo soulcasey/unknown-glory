@@ -1,13 +1,14 @@
-import React from "react";
 import { CharacterType, Vector2 } from "../dto";
 
 type CharacterProps = {
-    type: CharacterType;
-    position: Vector2;
-    name: string;
-    health: number;
-    energy: number;
-    block: number;
+    player: {
+        name: string;
+        characterType: CharacterType;
+        position: Vector2;
+        health: number;
+        energy: number;
+        block: number;
+    };
 };
 
 const characterEmojiMap: Record<CharacterType, string> = {
@@ -16,8 +17,8 @@ const characterEmojiMap: Record<CharacterType, string> = {
     [CharacterType.Rogue]: "🗡️",
 };
 
-export default function Character(props: CharacterProps) {
-    const emoji = characterEmojiMap[props.type] || "❓";
+export default function Character({ player }: CharacterProps) {
+    const emoji = characterEmojiMap[player.characterType] || "❓";
 
     return (
         <div
@@ -26,8 +27,8 @@ export default function Character(props: CharacterProps) {
                 width: "calc((100% - 6 * 0.5rem) / 7)",
                 aspectRatio: "1 / 1",
                 transform: `translate(
-                    calc(${props.position.x * 100}% + ${props.position.x * 0.5}rem),
-                    calc(${(2 - props.position.y) * 100}% + ${(2 - props.position.y) * 0.5}rem - 2px)
+                    calc(${player.position.x * 100}% + ${player.position.x * 0.5}rem),
+                    calc(${(2 - player.position.y) * 100}% + ${(2 - player.position.y) * 0.5}rem - 2px)
                 )`,
                 display: "flex",
                 alignItems: "center",
@@ -38,10 +39,10 @@ export default function Character(props: CharacterProps) {
         >
             <div className="flex flex-col items-center justify-center text-white text-center leading-tight">
                 <div className="text-5xl">{emoji}</div>
-                <div className="text-2xl">{props.name}</div>
-                <div className="text-2xl">❤️{props.health}</div>
+                <div className="text-2xl">{player.name}</div>
+                <div className="text-2xl">❤️{player.health}</div>
                 <div className="text-xl">
-                    ⚡ {props.energy} 🛡️ {props.block}
+                    ⚡ {player.energy} 🛡️ {player.block}
                 </div>
             </div>
         </div>

@@ -44,7 +44,7 @@ export default function CardSelection({ socket, cards, reroll, onClose }: CardSe
             <div className="fixed top-0 left-0 w-full h-full bg-black opacity-50 z-10" />
 
             {/* Modal */}
-            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 bg-opacity-70 p-6 rounded-md w-[90vw] h-[90vh] z-20">
+            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800/80 p-6 rounded-md w-[90vw] h-[90vh] z-20">
                 <h2 className="text-xl text-white text-center mb-4">Choose 3 cards</h2>
 
                 {/* Close button */}
@@ -59,14 +59,14 @@ export default function CardSelection({ socket, cards, reroll, onClose }: CardSe
                 <div className="flex justify-center gap-4 mb-6">
                     <button
                         onClick={handleReroll}
-                        className="px-4 py-2 bg-yellow-500 rounded-md text-white hover:bg-yellow-600 disabled:opacity-50"
+                        className="px-4 py-2 bg-yellow-500 rounded-md text-white hover:bg-yellow-600 disabled:bg-yellow-700"
                         disabled={reroll < 1}
                     >
                         🔄 Reroll {Math.floor(reroll)}
                     </button>
                     <button
                         onClick={handleSubmit}
-                        className="px-4 py-2 bg-green-600 rounded-md text-white hover:bg-green-700 disabled:opacity-50"
+                        className="px-4 py-2 bg-green-500 rounded-md text-white hover:bg-green-600 disabled:bg-green-700"
                         disabled={selectedIndices.length !== 3}
                     >
                         ✅ Submit

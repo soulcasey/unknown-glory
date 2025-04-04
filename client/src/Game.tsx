@@ -4,6 +4,7 @@ import { CharacterType, JoinRoomData } from "./dto";
 import CardSelection from "./components/CardSelection";
 import { Vector2, PlayersData } from "./dto";
 import Character from "./components/Character";
+import Wait from "./components/Wait"; // Import the Wait component
 
 const socket = io("http://localhost:3000");
 
@@ -16,7 +17,9 @@ export default function Game() {
     const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
     const [cards, setCards] = useState<string[]>([]);
     const [players, setPlayers] = useState<PlayersData>({ players: [] });
-    const [reroll, setReroll] = useState<number>(0); // Initialize reroll state
+    const [reroll, setReroll] = useState<number>(0);
+    const [waiting, setWaiting] = useState(false);
+
 
     useEffect(() => {
         // Listen for server responses
@@ -43,6 +46,14 @@ export default function Game() {
             setPlayers(playersData);
         });
 
+        socket.on("wait", () => {
+            setWaiting(true); // Set waiting to true when receiving "wait"
+        });
+
+        socket.on("unwait", () => {
+            setWaiting(false); // Set waiting to false when receiving "unwait"
+        });
+
         // Cleanup event listeners on unmount
         return () => {
             socket.off("roomFull");
@@ -50,6 +61,8 @@ export default function Game() {
             socket.off("joinedRoom");
             socket.off("cards");
             socket.off("updatePlayers");
+            socket.off("wait");
+            socket.off("unwait");
         };
     }, []);
 
@@ -64,30 +77,16 @@ export default function Game() {
             };
 
             socket.emit("joinRoom", joinRoomData);
-        } else {
+        }
+        else {
             setError("Please enter Room ID, Name, and select a Character Class.");
         }
     };
 
     return (
         <div className="flex flex-col items-center justify-center gap-6 p-6 bg-gray-800 min-h-screen w-full text-white">
-            {/* Button to open the CardSelection */}
-            <button
-                onClick={() => setShowCardSelection(true)}
-                className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
-            >
-                Open CardSelection
-            </button>
-
-            {/* CardSelection content */}
-            {showCardSelection && (
-                <CardSelection
-                    socket={socket}
-                    cards={cards}
-                    onClose={() => setShowCardSelection(false)}
-                    reroll={reroll}
-                />
-            )}
+            {/* Display Wait component if the player is waiting */}
+            {waiting && <Wait />}
 
             {!joined ? (
                 <div className="flex flex-col items-center gap-4">
@@ -124,10 +123,36 @@ export default function Game() {
                     >
                         Join Room
                     </button>
-                    {error && <p className="text-red-500">{error}</p>}
+                    {/* Error message rendering without affecting layout */}
+                    {error && (
+                        <p
+                            className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-red-500 mb-4"
+                            style={{ zIndex: 10 }}
+                        >
+                            {error}
+                        </p>
+                    )}
                 </div>
             ) : (
                 <>
+                    {/* Button to open the CardSelection */}
+                    <button
+                        onClick={() => setShowCardSelection(true)}
+                        className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
+                    >
+                        Open CardSelection
+                    </button>
+
+                    {/* CardSelection content */}
+                    {showCardSelection && (
+                        <CardSelection
+                            socket={socket}
+                            cards={cards}
+                            onClose={() => setShowCardSelection(false)}
+                            reroll={reroll}
+                        />
+                    )}
+
                     <h2 className="text-xl">Room: {roomId}</h2>
                     <h3 className="text-lg">Player: {playerName} ({characterType})</h3>
 
@@ -163,13 +188,8 @@ export default function Game() {
                             {/* 🧍 Animated Character */}
                             {players.players.map((player) => (
                                 <Character
-                                    key={player.name}
-                                    type={player.characterType}
-                                    position={player.position}
-                                    name={player.name}
-                                    health={player.health}
-                                    energy={player.energy}
-                                    block={player.block}
+                                    key = {player.name}
+                                    player = {player}
                                 />
                             ))}
                         </div>
