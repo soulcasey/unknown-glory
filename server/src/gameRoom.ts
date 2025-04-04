@@ -187,8 +187,8 @@ export default class GameRoom {
                 case CardType.Move:
                     if (hasEnergy === true) {
                         card.zones.forEach(zone => {
-                            player.position.x = Math.max(0, Math.min(this.xSize - 1, player.position.x + zone.x));
-                            player.position.y = Math.max(0, Math.min(this.ySize - 1, player.position.y + zone.y));
+                            player.position.x = Math.max(0, Math.min(this.xSize - 1, player.position.x + zone.x * card.value));
+                            player.position.y = Math.max(0, Math.min(this.ySize - 1, player.position.y + zone.y * card.value));
                         });
                     }
 

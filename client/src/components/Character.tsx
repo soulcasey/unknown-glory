@@ -11,14 +11,14 @@ type CharacterProps = {
     };
 };
 
-const characterEmojiMap: Record<CharacterType, string> = {
-    [CharacterType.Knight]: "⚔️",
-    [CharacterType.Archer]: "🏹",
-    [CharacterType.Rogue]: "🗡️",
+const characterImageMap: Record<CharacterType, string> = {
+    [CharacterType.Knight]: "/characters/Knight.gif",
+    [CharacterType.Archer]: "/characters/Archer.gif",
+    [CharacterType.Rogue]: "/characters/Rogue.gif",
 };
 
 export default function Character({ player }: CharacterProps) {
-    const emoji = characterEmojiMap[player.characterType] || "❓";
+    const characterImage = characterImageMap[player.characterType];
 
     return (
         <div
@@ -34,16 +34,21 @@ export default function Character({ player }: CharacterProps) {
                 alignItems: "center",
                 justifyContent: "center",
                 zIndex: 1,
-                fontSize: 60,
+                fontSize: "clamp(0.2rem, 2.5vw, 2rem)",
+                textAlign: "center",
             }}
         >
-            <div className="flex flex-col items-center justify-center text-white text-center leading-tight">
-                <div className="text-5xl">{emoji}</div>
-                <div className="text-2xl">{player.name}</div>
-                <div className="text-2xl">❤️{player.health}</div>
-                <div className="text-xl">
+            <div className="flex flex-col items-center justify-center leading-tight w-full h-full">
+                <img
+                    src={characterImage}
+                    alt={player.characterType}
+                    className="w-[60%] h-[60%] object-contain"
+                />
+                <div className="text-[0.9em]">{player.name}</div>
+                {/* <div className="text-[0.7em]">❤️{player.health}</div>
+                <div className="text-[0.6em]">
                     ⚡ {player.energy} 🛡️ {player.block}
-                </div>
+                </div> */}
             </div>
         </div>
     );

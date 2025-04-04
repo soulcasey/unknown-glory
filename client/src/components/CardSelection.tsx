@@ -28,6 +28,7 @@ export default function CardSelection({ socket, cards, reroll, onClose }: CardSe
     };
 
     const handleReroll = () => {
+        setSelectedIndices([]); // Unselect all cards
         socket.emit("rerollCards");
     };
 

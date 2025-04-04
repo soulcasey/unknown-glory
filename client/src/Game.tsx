@@ -23,12 +23,8 @@ export default function Game() {
 
     useEffect(() => {
         // Listen for server responses
-        socket.on("roomFull", () => {
-            setError("Room is full. Please try another room.");
-        });
-
-        socket.on("nameTaken", () => {
-            setError("Name already taken. Choose a different name");
+        socket.on("sendError", (message: string) => {
+            setError(message);
         });
 
         socket.on("joinedRoom", () => {
@@ -101,6 +97,7 @@ export default function Game() {
                     <input
                         type="text"
                         placeholder="Enter Your Name"
+                        maxLength={10}
                         value={playerName}
                         onChange={(e) => setPlayerName(e.target.value)}
                         className="p-2 text-white bg-gray-700 rounded-md border border-gray-400"

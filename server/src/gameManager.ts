@@ -8,6 +8,8 @@ export default class GameManager {
 
     private playerRoomId: Map<string, string> = new Map(); // Player Room KeyPair for faster filtering
 
+    private readonly maxNameCount = 10;
+
     constructor(io: Server) {
         this.io = io;
         this.setupSocketEvents();
@@ -31,15 +33,20 @@ export default class GameManager {
             this.rooms.set(roomId, new GameRoom(roomId));
         }
 
+        if (name.length > this.maxNameCount) {
+            socket.emit("sendError", "Name is too long. Max: 7");
+            return;
+        }
+
         const room = this.rooms.get(roomId);
 
         if (room.getPlayers().length >= 2) {
-            socket.emit("roomFull");
+            socket.emit("sendError", "Room is full. Please try another room.");
             return;
         }
 
         if (room.getPlayers().some(player => player.name === name)) {
-            socket.emit("nameTaken");
+            socket.emit("sendError", "Name already taken. Choose a different name");
             return;
         }
 
