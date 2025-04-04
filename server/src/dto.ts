@@ -9,7 +9,7 @@ export interface Vector2 {
 export interface JoinRoomData {
     roomId: string;
     name: string;
-    type: CharacterType;
+    characterType: CharacterType;
 }
 
 export interface PlayersData {

@@ -19,7 +19,7 @@ export default class GameManager {
 
             console.log(socket.id + " connected");
 
-            socket.on("joinRoom", (data: JoinRoomData) => this.handleJoinRoom(socket, data.roomId, data.name, data.type));
+            socket.on("joinRoom", (data: JoinRoomData) => this.handleJoinRoom(socket, data.roomId, data.name, data.characterType));
             socket.on("disconnect", () => this.handleDisconnect(socket));
 
             socket.on("selectCards", (cards: string[]) => this.getRoom(socket)?.handleSelectCards(this.io, socket, cards));
