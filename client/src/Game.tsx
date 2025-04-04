@@ -16,6 +16,7 @@ export default function Game() {
     const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
     const [cards, setCards] = useState<string[]>([]);
     const [players, setPlayers] = useState<PlayersData>({ players: [] });
+    const [reroll, setReroll] = useState<number>(0); // Initialize reroll state
 
     useEffect(() => {
         // Listen for server responses
@@ -34,10 +35,11 @@ export default function Game() {
 
         socket.on("cards", ({ cards, reroll }: { cards: string[]; reroll: number }) => {
             setCards(cards);
+            setReroll(reroll);
             setShowCardSelection(true);
         });
 
-        socket.on("updatePlayers", (playersData: PlayersData)=> {
+        socket.on("updatePlayers", (playersData: PlayersData) => {
             setPlayers(playersData);
         });
 
@@ -71,17 +73,21 @@ export default function Game() {
         <div className="flex flex-col items-center justify-center gap-6 p-6 bg-gray-800 min-h-screen w-full text-white">
             {/* Button to open the CardSelection */}
             <button
-                onClick = { () => setShowCardSelection(true) }
+                onClick={() => setShowCardSelection(true)}
                 className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
             >
                 Open CardSelection
             </button>
 
             {/* CardSelection content */}
-            {showCardSelection && <CardSelection
-                cards = { cards }
-                onClose = { () => setShowCardSelection(false) }
-            />}
+            {showCardSelection && (
+                <CardSelection
+                    socket={socket}
+                    cards={cards}
+                    onClose={() => setShowCardSelection(false)}
+                    reroll={reroll}
+                />
+            )}
 
             {!joined ? (
                 <div className="flex flex-col items-center gap-4">
