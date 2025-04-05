@@ -5,6 +5,7 @@ import CardSelection from "./components/CardSelection";
 import { Vector2, PlayersData } from "./dto";
 import Character from "./components/Character";
 import Wait from "./components/Wait"; // Import the Wait component
+import Announcement from "./components/Annoucement";
 
 const socket = io("http://localhost:3000");
 
@@ -14,12 +15,12 @@ export default function Game() {
     const [characterType, setCharacterType] = useState<CharacterType>(CharacterType.Knight);
     const [joined, setJoined] = useState(false);
     const [error, setError] = useState("");
-    const [showCardSelection, setShowCardSelection] = useState(false); // CardSelection visibility state
+    const [showCardSelection, setShowCardSelection] = useState(false);
     const [cards, setCards] = useState<string[]>([]);
     const [players, setPlayers] = useState<PlayersData>({ players: [] });
     const [reroll, setReroll] = useState<number>(0);
     const [waiting, setWaiting] = useState(false);
-
+    const [announcement, setAnnouncement] = useState<string>("");
 
     useEffect(() => {
         // Listen for server responses
@@ -50,15 +51,19 @@ export default function Game() {
             setWaiting(false); // Set waiting to false when receiving "unwait"
         });
 
+        socket.on("announcement", (message: string) => {
+            setAnnouncement(message);
+        });
+
         // Cleanup event listeners on unmount
         return () => {
-            socket.off("roomFull");
-            socket.off("nameTaken");
+            socket.off("sendError");
             socket.off("joinedRoom");
             socket.off("cards");
             socket.off("updatePlayers");
             socket.off("wait");
             socket.off("unwait");
+            socket.off("announcement");
         };
     }, []);
 
@@ -83,6 +88,14 @@ export default function Game() {
         <div className="flex flex-col items-center justify-center gap-6 p-6 bg-gray-800 min-h-screen w-full text-white">
             {/* Display Wait component if the player is waiting */}
             {waiting && <Wait />}
+
+            {/* Display Announcement component */}
+            {announcement && 
+                <Announcement
+                    message={announcement}
+                    onComplete={() => setAnnouncement("")} // Call when announcement is complete
+                />
+            }
 
             {!joined ? (
                 <div className="flex flex-col items-center gap-4">
@@ -185,8 +198,8 @@ export default function Game() {
                             {/* 🧍 Animated Character */}
                             {players.players.map((player) => (
                                 <Character
-                                    key = {player.name}
-                                    player = {player}
+                                    key={player.name}
+                                    player={player}
                                 />
                             ))}
                         </div>

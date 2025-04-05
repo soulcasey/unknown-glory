@@ -89,7 +89,7 @@ export default function CardSelection({ socket, cards, reroll, onClose }: CardSe
                                 }`}
                                 style={{
                                     aspectRatio: "3 / 4",
-                                    width: "18%",
+                                    width: "15%",
                                     position: "relative",
                                 }}
                             >

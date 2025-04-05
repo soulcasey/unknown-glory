@@ -70,11 +70,18 @@ export default class GameRoom {
 
         if (this.players.length === this.maxPlayerCount) {
             io.in(this.roomId).emit("unwait");
-
+            
             this.step = GameStep.Select;
-            io.in(this.roomId).emit("gameStep", { step: this.step });
+            // io.in(this.roomId).emit("gameStep", { step: this.step });
 
             this.setPriority(io);
+            
+            io.in(this.roomId).emit("announcement",
+                "Game Start!\n" +
+                this.players[0].name + " vs " + this.players[1].name + "\n" +
+                "Priority player: " + this.players[this.priorityIndex].name
+            );
+
             this.players.forEach(player => this.sendRandomCards(io, player));
         }
         else {
