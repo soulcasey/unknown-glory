@@ -41,7 +41,7 @@ function PlayerDetails({ player }: { player: RoomData["players"][0] }) {
     return (
         <div>
             <h3 className="text-lg font-semibold">
-                Player: {player.name} ({player.characterType}) {player.isPriority ? "🥇" : ""}
+                {player.name} {player.isPriority ? "🥇" : ""}
             </h3>
             <h3 className="text-lg font-semibold">
                 ❤️: {player.health} {healthChange !== null && (

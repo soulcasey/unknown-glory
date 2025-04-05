@@ -18,6 +18,8 @@ export default class GameRoom {
     private players: Player[] = [];
     private step: GameStep = GameStep.Init;
 
+    private round: number = 0;
+
     private readonly xSize = 7;
     private readonly ySize = 3;
 
@@ -69,19 +71,22 @@ export default class GameRoom {
             io.in(this.roomId).emit("unwait");
             
             this.step = GameStep.Select;
+            this.round ++;
             // io.in(this.roomId).emit("gameStep", { step: this.step });
 
             this.setPriority(io);
             this.sendRoomData(io)
-            
-            io.in(this.roomId).emit("announcement",
-                "Game Start!\n" +
-                this.players[0].name + " vs " + this.players[1].name + "\n" +
+
+            await this.sendAnnoucement(io,
+                "Game Start!\n\n" +
+                this.players[0].name + " vs " + this.players[1].name
+            )
+
+            await this.sendAnnoucement(io,
+                "Round " + this.round + "\n\n" +
                 "Priority player: " + this.players[this.priorityIndex].name
-            );
-
-            await (() => new Promise(resolve => setTimeout(resolve, 4500)))();
-
+            )
+            
             this.players.forEach(player => this.sendRandomCards(io, player));
         }
         else {
@@ -91,7 +96,7 @@ export default class GameRoom {
         }
     }
 
-    handleSelectCards(io: Server, socket: Socket, cards: string[]) {
+    async handleSelectCards(io: Server, socket: Socket, cards: string[]) {
         if (this.step !== GameStep.Select) return;
         if (cards.length !== this.selectCardCount) return;
 
@@ -115,6 +120,11 @@ export default class GameRoom {
         if (this.players.every(p => p.chosenCards.length === this.selectCardCount)) {
             io.in(this.roomId).emit("unwait");
             this.step = GameStep.Execute;
+
+            await this.sendAnnoucement(io,
+                "Round " + this.round + " Start!"
+            )
+
             this.executeCards(io);
         }
         else {
@@ -138,6 +148,7 @@ export default class GameRoom {
     private sendRoomData(io: Server) {
         const roomData: RoomData = {
             roomId: this.roomId,
+            round: this.round,
             players: this.players.map((player, index) => ({
                 name: player.name,
                 characterType: player.character.type,
@@ -297,7 +308,7 @@ export default class GameRoom {
         this.evaluateResults(io);
     }
 
-    private evaluateResults(io: Server) {
+    private async evaluateResults(io: Server) {
         const alivePlayers = this.players.filter(player => player.health > 0);
         // const deadPlayers = this.players.filter(player => player.health <= 0);
 
@@ -320,9 +331,15 @@ export default class GameRoom {
 
 
             this.step = GameStep.Select;
-            
+            this.round ++;
             this.setPriority(io);
             this.sendRoomData(io)
+            
+            await this.sendAnnoucement(io,
+                "Round " + this.round + "\n\n" +
+                "Priority player: " + this.players[this.priorityIndex].name
+            )
+
             this.players.forEach(player => this.sendRandomCards(io, player));
         }
     }
@@ -346,5 +363,11 @@ export default class GameRoom {
         }
 
         return player;
+    }
+
+    private async sendAnnoucement(io: Server, message: string) {
+        io.in(this.roomId).emit("announcement", message);
+        
+        await (() => new Promise(resolve => setTimeout(resolve, 3500)))();
     }
 }

@@ -4,7 +4,7 @@ import { RoomData } from "./dto";
 import CardSelection from "./components/CardSelection";
 import Character from "./components/Character";
 import Wait from "./components/Wait";
-import Announcement from "./components/Annoucement";
+import Announcement from "./components/Announcement";
 import Login from "./components/Login";
 import PlayerInfo from "./components/PlayerInfo";
 
@@ -98,14 +98,17 @@ export default function Game() {
                         {/* Center Room Info */}
                         <div className="flex flex-col items-center justify-center w-1/3 gap-2">
                             <h2 className="text-xl">Room: {roomData.roomId}</h2>
-                            {cards.length > 0 && (
-                                <button
-                                    onClick={() => setShowCardSelection(true)}
-                                    className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
-                                >
-                                    Open CardSelection
-                                </button>
-                            )}
+                            <button
+                                onClick={() => setShowCardSelection(true)}
+                                disabled={cards.length === 0}
+                                className={`px-4 py-2 rounded-md mt-4 transition-all duration-300 ${
+                                    cards.length === 0
+                                        ? "bg-gray-500 cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-700"
+                                }`}
+                            >
+                                Open Card
+                            </button>
                         </div>
 
                         {/* Right */}
@@ -127,13 +130,12 @@ export default function Game() {
                                 return (
                                     <div
                                         key={`${col}-${row}`}
-                                        className="flex items-start justify-center pt-1 text-white bg-gray-600 text-sm"
+                                        className="flex items-start justify-center pt-1 bg-gray-600"
                                         style={{
                                             width: "100%",
                                             aspectRatio: "1 / 1",
                                         }}
                                     >
-                                        {col}, {row}
                                     </div>
                                 );
                             })}

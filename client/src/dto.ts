@@ -17,6 +17,7 @@ export interface JoinRoomData {
 
 export interface RoomData {
     roomId: string;
+    round: number;
     players: {
         name: string;
         characterType: CharacterType;

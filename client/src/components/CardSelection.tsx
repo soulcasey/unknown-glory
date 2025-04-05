@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Socket } from "socket.io-client";
 
 interface CardSelectionProps {
@@ -9,8 +9,14 @@ interface CardSelectionProps {
 }
 
 export default function CardSelection({ socket, cards, reroll, onClose }: CardSelectionProps) {
-    
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
+    const [visible, setVisible] = useState(false); // for fade-in/out animation
+
+    useEffect(() => {
+        // Trigger fade-in on mount
+        const timer = setTimeout(() => setVisible(true), 10);
+        return () => clearTimeout(timer);
+    }, []);
 
     const toggleCardSelection = (index: number) => {
         if (selectedIndices.includes(index)) {
@@ -33,24 +39,40 @@ export default function CardSelection({ socket, cards, reroll, onClose }: CardSe
     };
 
     const handleSubmit = () => {
+        if (selectedIndices.length !== 3) return;
+        
         // Convert selected indices to card names
         const selectedCards = selectedIndices.map(index => cards[index]);
         socket.emit("selectCards", selectedCards);
-        onClose(); // Close the popup after submission
     };
 
-    return (    
+    const closeWithFadeOut = () => {
+        setVisible(false);
+        setTimeout(() => {
+            onClose();
+        }, 300); // Matches the fade-out duration
+    };
+
+    return (
         <>
             {/* Overlay */}
-            <div className="fixed top-0 left-0 w-full h-full bg-black opacity-50 z-10" />
+            <div
+                className={`fixed top-0 left-0 w-full h-full bg-black z-10 transition-opacity duration-300 ${
+                    visible ? "opacity-50" : "opacity-0"
+                }`}
+            />
 
             {/* Modal */}
-            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800/80 p-6 rounded-md w-[90vw] h-[90vh] z-20">
+            <div
+                className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800/90 p-6 rounded-md w-[90vw] h-[90vh] z-20 transition-opacity duration-300 ${
+                    visible ? "opacity-100" : "opacity-0"
+                }`}
+            >
                 <h2 className="text-xl text-white text-center mb-4">Choose 3 cards</h2>
 
                 {/* Close button */}
                 <button
-                    onClick={onClose}
+                    onClick={closeWithFadeOut}
                     className="absolute top-2 right-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white"
                 >
                     Close
