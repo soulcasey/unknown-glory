@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import Player from "./player";
 import { Knight, Archer, Rogue, Character } from "./character";
 import { Card, CardType } from "./card";
-import { Vector2, MoveData, AttackData, BlockData, PlayersData, CharacterType } from "./dto";
+import { Vector2, MoveData, AttackData, BlockData, RoomData, CharacterType } from "./dto";
 import { blob } from "stream/consumers";
 
 enum GameStep {
@@ -58,15 +58,12 @@ export default class GameRoom {
         this.step = GameStep.Init;
     }
 
-    handleJoinRoom(io: Server, socket: Socket, name: string, type: CharacterType) {
+    async handleJoinRoom(io: Server, socket: Socket, name: string, type: CharacterType) {
         if (this.step !== GameStep.Init) return;
         const newPlayer = new Player(socket.id, name, type);
         newPlayer.position = this.players.length === 0 ? this.position1 : this.position2
         this.players.push(newPlayer);
         socket.join(this.roomId);
-
-        io.in(this.roomId).emit("joinedRoom", { player: newPlayer.name });
-        this.updatePlayers(io)
 
         if (this.players.length === this.maxPlayerCount) {
             io.in(this.roomId).emit("unwait");
@@ -75,6 +72,7 @@ export default class GameRoom {
             // io.in(this.roomId).emit("gameStep", { step: this.step });
 
             this.setPriority(io);
+            this.sendRoomData(io)
             
             io.in(this.roomId).emit("announcement",
                 "Game Start!\n" +
@@ -82,9 +80,13 @@ export default class GameRoom {
                 "Priority player: " + this.players[this.priorityIndex].name
             );
 
+            await (() => new Promise(resolve => setTimeout(resolve, 4500)))();
+
             this.players.forEach(player => this.sendRandomCards(io, player));
         }
         else {
+            this.sendRoomData(io)
+
             io.to(newPlayer.id).emit("wait");
         }
     }
@@ -108,6 +110,8 @@ export default class GameRoom {
 
         player.chosenCards = cards;
 
+        io.to(player.id).emit("cardsReceived");
+        
         if (this.players.every(p => p.chosenCards.length === this.selectCardCount)) {
             io.in(this.roomId).emit("unwait");
             this.step = GameStep.Execute;
@@ -131,9 +135,10 @@ export default class GameRoom {
         this.sendRandomCards(io, this.getPlayer(socket));
     }
 
-    private updatePlayers(io: Server) {
-        const playersData: PlayersData = {
-            players: this.players.map(player => ({
+    private sendRoomData(io: Server) {
+        const roomData: RoomData = {
+            roomId: this.roomId,
+            players: this.players.map((player, index) => ({
                 name: player.name,
                 characterType: player.character.type,
                 position: player.position,
@@ -141,10 +146,11 @@ export default class GameRoom {
                 reroll: player.reroll,
                 energy: player.energy,
                 block: player.block,
-            }))
+                isPriority: index === this.priorityIndex
+            })),
         };
 
-        io.in(this.roomId).emit("updatePlayers", playersData);
+        io.in(this.roomId).emit("roomData", roomData);
     }
 
     private setPriority(io: Server) {
@@ -171,7 +177,7 @@ export default class GameRoom {
     }
 
     // If multiple opponent feature gets implemented, directional casting needs to be considered
-    private executeCards(io: Server) {
+    private async executeCards(io: Server) {
         let playerIndex = this.priorityIndex;
         let opponentIndex = playerIndex === 1 ? 0 : 1;
 
@@ -209,7 +215,6 @@ export default class GameRoom {
                     }
 
                     io.in(this.roomId).emit("moveData", { moveData });
-
                     break;
 
                 case CardType.Block:
@@ -227,7 +232,6 @@ export default class GameRoom {
                     }
 
                     io.in(this.roomId).emit("blockData", { blockData });
-
                     break;
 
                 case CardType.Attack:
@@ -277,9 +281,11 @@ export default class GameRoom {
                     }
 
                     io.in(this.roomId).emit("attackData", { attackData });
-
                     break;
             }
+
+            this.sendRoomData(io);
+            await (() => new Promise(r => setTimeout(r, 2000)))();
 
             if (player.health <= 0 || opponent.health <= 0) {
                 break;
@@ -315,8 +321,8 @@ export default class GameRoom {
 
             this.step = GameStep.Select;
             
-            this.updatePlayers(io)
             this.setPriority(io);
+            this.sendRoomData(io)
             this.players.forEach(player => this.sendRandomCards(io, player));
         }
     }

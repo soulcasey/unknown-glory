@@ -1,36 +1,27 @@
 import { useState, useEffect } from "react";
 import io from "socket.io-client";
-import { CharacterType, JoinRoomData } from "./dto";
+import { RoomData } from "./dto";
 import CardSelection from "./components/CardSelection";
-import { Vector2, PlayersData } from "./dto";
 import Character from "./components/Character";
-import Wait from "./components/Wait"; // Import the Wait component
+import Wait from "./components/Wait";
 import Announcement from "./components/Annoucement";
+import Login from "./components/Login";
+import PlayerInfo from "./components/PlayerInfo";
 
 const socket = io("http://localhost:3000");
 
 export default function Game() {
-    const [roomId, setRoomId] = useState("");
-    const [playerName, setPlayerName] = useState("");
-    const [characterType, setCharacterType] = useState<CharacterType>(CharacterType.Knight);
-    const [joined, setJoined] = useState(false);
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false);
     const [cards, setCards] = useState<string[]>([]);
-    const [players, setPlayers] = useState<PlayersData>({ players: [] });
+    const [roomData, setRoomData] = useState<RoomData | null>();
     const [reroll, setReroll] = useState<number>(0);
     const [waiting, setWaiting] = useState(false);
     const [announcement, setAnnouncement] = useState<string>("");
 
     useEffect(() => {
-        // Listen for server responses
         socket.on("sendError", (message: string) => {
             setError(message);
-        });
-
-        socket.on("joinedRoom", () => {
-            setError("");
-            setJoined(true);
         });
 
         socket.on("cards", ({ cards, reroll }: { cards: string[]; reroll: number }) => {
@@ -38,174 +29,123 @@ export default function Game() {
             setReroll(reroll);
             setShowCardSelection(true);
         });
+        
+        socket.on("cardsReceived", () => {
+            setCards([])
+            setShowCardSelection(false);
+        })
 
-        socket.on("updatePlayers", (playersData: PlayersData) => {
-            setPlayers(playersData);
+        socket.on("roomData", (roomData: RoomData) => {
+            setRoomData(roomData);
         });
 
-        socket.on("wait", () => {
-            setWaiting(true); // Set waiting to true when receiving "wait"
-        });
+        socket.on("wait", () => setWaiting(true));
+        socket.on("unwait", () => setWaiting(false));
+        socket.on("announcement", (message: string) => setAnnouncement(message));
 
-        socket.on("unwait", () => {
-            setWaiting(false); // Set waiting to false when receiving "unwait"
-        });
-
-        socket.on("announcement", (message: string) => {
-            setAnnouncement(message);
-        });
-
-        // Cleanup event listeners on unmount
         return () => {
             socket.off("sendError");
-            socket.off("joinedRoom");
             socket.off("cards");
-            socket.off("updatePlayers");
+            socket.off("sendRoomData");
             socket.off("wait");
             socket.off("unwait");
             socket.off("announcement");
+            socket.off("cardsReceived");
         };
     }, []);
 
-    const handleJoinRoom = () => {
-        if (roomId.trim() && playerName.trim()) {
-            setError(""); // Clear error message when attempting to join
-
-            const joinRoomData: JoinRoomData = {
-                roomId,
-                name: playerName,
-                characterType,
-            };
-
-            socket.emit("joinRoom", joinRoomData);
-        }
-        else {
-            setError("Please enter Room ID, Name, and select a Character Class.");
-        }
-    };
-
     return (
         <div className="flex flex-col items-center justify-center gap-6 p-6 bg-gray-800 min-h-screen w-full text-white">
-            {/* Display Wait component if the player is waiting */}
             {waiting && <Wait />}
 
-            {/* Display Announcement component */}
-            {announcement && 
+            {announcement && (
                 <Announcement
                     message={announcement}
-                    onComplete={() => setAnnouncement("")} // Call when announcement is complete
+                    onComplete={() => setAnnouncement("")}
                 />
-            }
+            )}
 
-            {!joined ? (
-                <div className="flex flex-col items-center gap-4">
-                    <input
-                        type="text"
-                        placeholder="Enter Room ID"
-                        value={roomId}
-                        onChange={(e) => setRoomId(e.target.value)}
-                        className="p-2 text-white bg-gray-700 rounded-md border border-gray-400"
-                    />
+            {showCardSelection && (
+                <CardSelection
+                    socket={socket}
+                    cards={cards}
+                    onClose={() => setShowCardSelection(false)}
+                    reroll={reroll}
+                />
+            )}
 
-                    <input
-                        type="text"
-                        placeholder="Enter Your Name"
-                        maxLength={10}
-                        value={playerName}
-                        onChange={(e) => setPlayerName(e.target.value)}
-                        className="p-2 text-white bg-gray-700 rounded-md border border-gray-400"
-                    />
+            {error && (
+                <p
+                    className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-red-500 mb-4"
+                    style={{ zIndex: 10 }}
+                >
+                    {error}
+                </p>
+            )}
 
-                    <select
-                        value={characterType}
-                        onChange={(e) => setCharacterType(e.target.value as CharacterType)}
-                        className="p-2 text-white rounded-md border bg-gray-700 border-gray-400"
-                    >
-                        {Object.values(CharacterType).map((type) => (
-                            <option key={type} value={type}>
-                                {type}
-                            </option>
-                        ))}
-                    </select>
-                    <button
-                        onClick={handleJoinRoom}
-                        className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
-                    >
-                        Join Room
-                    </button>
-                    {/* Error message rendering without affecting layout */}
-                    {error && (
-                        <p
-                            className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-red-500 mb-4"
-                            style={{ zIndex: 10 }}
-                        >
-                            {error}
-                        </p>
-                    )}
-                </div>
+            {!roomData ? (
+                <Login
+                    onError={setError}
+                    onSubmit={() => setError("")}
+                    socket={socket}
+                />
             ) : (
                 <>
-                    {/* Button to open the CardSelection */}
-                    <button
-                        onClick={() => setShowCardSelection(true)}
-                        className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
-                    >
-                        Open CardSelection
-                    </button>
+                    <div className="flex w-full max-w-6xl justify-between items-start mt-6 gap-4">
+                        {/* Left */}
+                        <PlayerInfo players={roomData.players.slice(0, 1)} />
 
-                    {/* CardSelection content */}
-                    {showCardSelection && (
-                        <CardSelection
-                            socket={socket}
-                            cards={cards}
-                            onClose={() => setShowCardSelection(false)}
-                            reroll={reroll}
-                        />
-                    )}
+                        {/* Center Room Info */}
+                        <div className="flex flex-col items-center justify-center w-1/3 gap-2">
+                            <h2 className="text-xl">Room: {roomData.roomId}</h2>
+                            {cards.length > 0 && (
+                                <button
+                                    onClick={() => setShowCardSelection(true)}
+                                    className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
+                                >
+                                    Open CardSelection
+                                </button>
+                            )}
+                        </div>
 
-                    <h2 className="text-xl">Room: {roomId}</h2>
-                    <h3 className="text-lg">Player: {playerName} ({characterType})</h3>
+                        {/* Right */}
+                        <PlayerInfo players={roomData.players.slice(1)} />
+                    </div>
 
-                    {/* Grid Container */}
+                    {/* Grid Layout */}
                     <div
-                        className="relative"
+                        className="relative mt-8"
                         style={{
                             width: "min(95vw, 1500px)",
                             aspectRatio: "7 / 3",
                         }}
                     >
-                        <div className="relative" style={{ width: "min(95vw, 1500px)", aspectRatio: "7 / 3" }}>
-                            <div className="absolute inset-0 grid grid-cols-7 grid-rows-3 gap-2">
-                                {[...Array(21)].map((_, index) => {
-                                    const col = index % 7;
-                                    const row = 2 - Math.floor(index / 7); // invert Y-axis (bottom row = 0)
-
-                                    return (
-                                        <div
-                                            key={`${col}-${row}`}
-                                            className="flex items-start justify-center pt-1 text-white bg-gray-600 text-sm"
-                                            style={{
-                                                width: "100%",
-                                                aspectRatio: "1 / 1",
-                                            }}
-                                        >
-                                            {col} , {row}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* 🧍 Animated Character */}
-                            {players.players.map((player) => (
-                                <Character
-                                    key={player.name}
-                                    player={player}
-                                />
-                            ))}
+                        <div className="absolute inset-0 grid grid-cols-7 grid-rows-3 gap-2">
+                            {[...Array(21)].map((_, index) => {
+                                const col = index % 7;
+                                const row = 2 - Math.floor(index / 7);
+                                return (
+                                    <div
+                                        key={`${col}-${row}`}
+                                        className="flex items-start justify-center pt-1 text-white bg-gray-600 text-sm"
+                                        style={{
+                                            width: "100%",
+                                            aspectRatio: "1 / 1",
+                                        }}
+                                    >
+                                        {col}, {row}
+                                    </div>
+                                );
+                            })}
                         </div>
+
+                        {roomData.players.map((player) => (
+                            <Character key={player.name} player={player} />
+                        ))}
                     </div>
                 </>
             )}
+
         </div>
     );
 }

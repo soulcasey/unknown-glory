@@ -15,7 +15,8 @@ export interface JoinRoomData {
     characterType: CharacterType;
 }
 
-export interface PlayersData {
+export interface RoomData {
+    roomId: string;
     players: {
         name: string;
         characterType: CharacterType;
@@ -24,6 +25,7 @@ export interface PlayersData {
         reroll: number;
         energy: number;
         block: number;
+        isPriority: boolean;
     }[]
 }
 
