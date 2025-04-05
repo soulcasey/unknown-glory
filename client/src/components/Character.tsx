@@ -9,6 +9,7 @@ type CharacterProps = {
         energy: number;
         block: number;
     };
+    speech: string | null;
 };
 
 const characterImageMap: Record<CharacterType, string> = {
@@ -17,7 +18,7 @@ const characterImageMap: Record<CharacterType, string> = {
     [CharacterType.Rogue]: "/characters/Rogue.gif",
 };
 
-export default function Character({ player }: CharacterProps) {
+export default function Character({ player, speech }: CharacterProps) {
     const characterImage = characterImageMap[player.characterType];
 
     return (
@@ -38,17 +39,22 @@ export default function Character({ player }: CharacterProps) {
                 textAlign: "center",
             }}
         >
-            <div className="flex flex-col items-center justify-center leading-tight w-full h-full">
+            <div className="flex flex-col items-center justify-center leading-tight w-full h-full relative">
+
+                {speech && (
+                    <div className="absolute -top-[1rem] w-full flex justify-center z-10 pointer-events-none">
+                        <div className="bg-black text-white text-[0.9em] px-3 py-1 rounded-full shadow-md border border-black/20 whitespace-nowrap">
+                            {speech}
+                        </div>
+                    </div>
+                )}
+
                 <img
                     src={characterImage}
                     alt={player.characterType}
                     className="w-[60%] h-[60%] object-contain"
                 />
                 <div className="text-[0.9em]">{player.name}</div>
-                {/* <div className="text-[0.7em]">❤️{player.health}</div>
-                <div className="text-[0.6em]">
-                    ⚡ {player.energy} 🛡️ {player.block}
-                </div> */}
             </div>
         </div>
     );

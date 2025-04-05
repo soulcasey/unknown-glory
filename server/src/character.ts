@@ -1,5 +1,5 @@
-import { Card, CardType } from "./card";
-import { CharacterType } from "./dto";
+import Card from "./card";
+import { CharacterType, CardType } from "./dto";
 
 // Abstract Character class
 export abstract class Character {

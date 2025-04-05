@@ -1,14 +1,14 @@
 import { Server, Socket } from "socket.io";
 import Player from "./player";
 import { Knight, Archer, Rogue, Character } from "./character";
-import { Card, CardType } from "./card";
-import { Vector2, MoveData, AttackData, BlockData, RoomData, CharacterType } from "./dto";
+import Card from "./card";
+import { Vector2, CardActionData, RoomData, CharacterType, CardType } from "./dto";
 import { blob } from "stream/consumers";
 
 enum GameStep {
     Init,
     Select,
-    Execute,
+    Action,
     End,
 }
 
@@ -104,13 +104,13 @@ export default class GameRoom {
         
         if (this.players.every(p => p.chosenCards.length === this.selectCardCount)) {
             io.in(this.roomId).emit("unwait");
-            this.step = GameStep.Execute;
+            this.step = GameStep.Action;
 
             await this.sendAnnoucement(io,
                 "Round " + this.round + " Start!"
             )
 
-            this.executeCards(io);
+            this.activateCards(io);
         }
         else {
             io.to(player.id).emit("wait");
@@ -221,12 +221,12 @@ export default class GameRoom {
     }
 
     // If multiple opponent feature gets implemented, directional casting needs to be considered
-    private async executeCards(io: Server) {
+    private async activateCards(io: Server) {
         let playerIndex = this.priorityIndex;
         let opponentIndex = playerIndex === 1 ? 0 : 1;
 
         while (true) {
-            if (this.step !== GameStep.Execute) return;
+            if (this.step !== GameStep.Action) return;
 
             const player = this.players[playerIndex];
             const cardKey = player.chosenCards.shift()
@@ -241,50 +241,38 @@ export default class GameRoom {
                 player.energy -= card.cost;
             }
 
+            const cardActionData: CardActionData = {
+                player: {
+                    name: player.name,
+                    index: playerIndex,
+                    hasEnergy: hasEnergy
+                },
+                card: {
+                    key: cardKey,
+                    name: card.name,
+                    type: card.type
+                },
+                hitZones: []
+            };
 
-            switch (card.type) {
-                case CardType.Move:
-                    if (hasEnergy === true) {
+            if (hasEnergy === true)
+            {
+                switch (card.type) {
+                    case CardType.Move:
                         card.zones.forEach(zone => {
                             player.position.x = Math.max(0, Math.min(this.xSize - 1, player.position.x + zone.x * card.value));
                             player.position.y = Math.max(0, Math.min(this.ySize - 1, player.position.y + zone.y * card.value));
                         });
-                    }
 
-                    const moveData: MoveData = {
-                        cardKey: cardKey,
-                        cardName: card.name,
-                        player: player.name,
-                        newPosition: player.position,
-                        hasEnergy: hasEnergy,
-                        currentEnergy: player.energy
-                    }
+                        break;
 
-                    io.in(this.roomId).emit("moveData", { moveData });
-                    break;
-
-                case CardType.Block:
-                    if (hasEnergy === true) {
+                    case CardType.Block:
                         player.block = card.value;
-                    }
 
-                    const blockData: BlockData = {
-                        cardKey: cardKey,
-                        cardName: card.name,
-                        player: player.name,
-                        block: player.block,
-                        hasEnergy: hasEnergy,
-                        currentEnergy: player.energy
-                    }
+                        break;
 
-                    io.in(this.roomId).emit("blockData", { blockData });
-                    break;
-
-                case CardType.Attack:
-                    const hitZones: Vector2[] = [];
-                
-                    if (hasEnergy === true) {
-
+                    case CardType.Attack:
+                        const hitZones: Vector2[] = [];
                         const direction = opponent.position.x >= player.position.x ? 1 : -1;
 
                         card.zones.forEach(zone => {
@@ -297,38 +285,27 @@ export default class GameRoom {
                             hitZones.push(hitZone);
                             }
                         });
-                    }
 
-                    let isHit = hitZones.some(zone => zone.x === opponent.position.x && zone.y === opponent.position.y);
+                        let isHit = hitZones.some(zone => zone.x === opponent.position.x && zone.y === opponent.position.y);
 
-                    if (isHit === true) {
-                        let damage = card.value;
-                        if (opponent.block > 0) {
-                            damage = Math.max(0, damage - opponent.block);
-                            opponent.block = 0;
-                        }    
+                        if (isHit === true) {
+                            let damage = card.value;
+                            if (opponent.block > 0) {
+                                damage = Math.max(0, damage - opponent.block);
+                                opponent.block = 0;
+                            }    
 
-                        opponent.health = Math.max(0, opponent.health - damage);
-                    }
-                    
-                    
-                    const attackData: AttackData = {
-                        cardKey: cardKey,
-                        cardName: card.name,
-                        player: player.name,
-                        hitZones: hitZones,
-                        opponent: isHit ? {
-                            name: opponent.name,
-                            health: opponent.health,
-                            block: opponent.block,
-                        } : undefined,
-                        hasEnergy: hasEnergy,
-                        currentEnergy: player.energy
-                    }
+                            opponent.health = Math.max(0, opponent.health - damage);
+                        }
 
-                    io.in(this.roomId).emit("attackData", { attackData });
-                    break;
+                        cardActionData.hitZones = hitZones;
+                        break;
+                }
             }
+            
+            io.in(this.roomId).emit("cardAction", cardActionData);
+
+            await (() => new Promise(r => setTimeout(r, 1000)))();
 
             this.sendRoomData(io);
             await (() => new Promise(r => setTimeout(r, 2000)))();

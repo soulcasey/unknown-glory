@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import io from "socket.io-client";
-import { RoomData } from "./dto";
+import { RoomData, CardActionData, CardType } from "./dto";
 import CardSelection from "./components/CardSelection";
 import Character from "./components/Character";
 import Wait from "./components/Wait";
@@ -14,10 +14,11 @@ export default function Game() {
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false);
     const [cards, setCards] = useState<string[]>([]);
-    const [roomData, setRoomData] = useState<RoomData | null>();
+    const [roomData, setRoomData] = useState<RoomData | null>(null);
     const [reroll, setReroll] = useState<number>(0);
     const [waiting, setWaiting] = useState(false);
     const [announcement, setAnnouncement] = useState<string>("");
+    const [cardAction, setCardAction] = useState<CardActionData | null>();
 
     useEffect(() => {
         socket.on("sendError", (message: string) => {
@@ -43,16 +44,29 @@ export default function Game() {
         socket.on("unwait", () => setWaiting(false));
         socket.on("announcement", (message: string) => setAnnouncement(message));
 
+        // New: Socket listeners for move, block, attack
+        socket.on("cardAction", (cardActionData : CardActionData) => {
+            setCardAction(cardActionData);
+            setTimeout(() => setCardAction(null), 2000);
+        });
+
         return () => {
             socket.off("sendError");
             socket.off("cards");
-            socket.off("sendRoomData");
+            socket.off("roomData");
             socket.off("wait");
             socket.off("unwait");
             socket.off("announcement");
             socket.off("cardsReceived");
+            socket.off("cardAction");
         };
     }, []);
+
+    const isHitZone = (col: number, row: number): boolean => {
+        if (cardAction?.card.type !== CardType.Attack) return false;
+        return cardAction.hitZones.some((zone) => zone.x === col && zone.y === row);
+    };
+
 
     return (
         <div className="flex flex-col items-center justify-center gap-6 p-6 bg-gray-800 min-h-screen w-full text-white">
@@ -127,23 +141,40 @@ export default function Game() {
                             {[...Array(21)].map((_, index) => {
                                 const col = index % 7;
                                 const row = 2 - Math.floor(index / 7);
+                                const isHit = isHitZone(col, row);
+
                                 return (
                                     <div
                                         key={`${col}-${row}`}
-                                        className="flex items-start justify-center pt-1 bg-gray-600"
+                                        className={`flex items-start justify-center pt-1 ${
+                                            isHit ? "bg-red-600" : "bg-gray-600"
+                                        }`}
                                         style={{
                                             width: "100%",
                                             aspectRatio: "1 / 1",
+                                            transition: "background-color 0.3s ease",
                                         }}
-                                    >
-                                    </div>
+                                    ></div>
                                 );
                             })}
                         </div>
 
-                        {roomData.players.map((player) => (
-                            <Character key={player.name} player={player} />
-                        ))}
+                        {roomData.players.map((player, index) => {
+                            const speech =
+                                cardAction?.player.index === index
+                                    ? cardAction.player.hasEnergy === true ?
+                                        cardAction.card.name
+                                        : "Not enough energy..."
+                                    : "";
+
+                            return (
+                                <Character
+                                    key={player.name}
+                                    player={player}
+                                    speech={speech}
+                                />
+                            );
+                        })}
                     </div>
                 </>
             )}

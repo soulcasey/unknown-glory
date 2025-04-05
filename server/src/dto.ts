@@ -4,6 +4,13 @@ export enum CharacterType {
     Rogue = "Rogue",
 }
 
+// Enum for the type of card
+export enum CardType {
+    Move = "Move",
+    Block = "Block",
+    Attack = "Attack",
+}
+
 export interface Vector2 {
     x: number;
     y: number;
@@ -30,27 +37,17 @@ export interface RoomData {
     }[]
 }
 
-interface CardExecute {
-    player: string;
-    cardKey: string;
-    cardName: string;
-    hasEnergy: boolean,
-    currentEnergy: number;
-}
-
-export interface MoveData extends CardExecute{
-    newPosition: Vector2;
-}
-
-export interface AttackData extends CardExecute{
-    hitZones: Vector2[];
-    opponent: {
+export interface CardActionData {
+    player: {
         name: string;
-        health: number;
-        block: number;
+        index: Number;
+        hasEnergy: boolean,
     };
-}
+    card : {
+        key: string;
+        name: string;
+        type: CardType;
+    }
 
-export interface BlockData extends CardExecute{
-    block: number;
+    hitZones: Vector2[];
 }

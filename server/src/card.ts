@@ -1,14 +1,8 @@
-import { Vector2 } from "./dto";
+import { Vector2, CardType } from "./dto";
 
-// Enum for the type of card
-export enum CardType {
-    Move = "Move",
-    Block = "Block",
-    Attack = "Attack",
-}
 
 // Card class definition
-export class Card {
+export default class Card {
     readonly key: string;
     readonly name: string
     readonly type: CardType;
