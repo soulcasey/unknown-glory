@@ -95,7 +95,7 @@ export class Knight extends Character {
         
                 new Card("B", "Block",       CardType.Block, 15, 1, [{ x: 0, y: 0 }]),
         
-                new Card("A1", "Attack",      CardType.Attack, 20, 0, [
+                new Card("A", "Attack",      CardType.Attack, 20, 0, [
                     { x: 1, y: 0 },
                 ]),
                 new Card("S1", "Special 1",   CardType.Attack, 30, 1, [

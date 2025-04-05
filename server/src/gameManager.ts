@@ -61,7 +61,7 @@ export default class GameManager {
     
         if (!room) return;
     
-        room.handleDisconnect(socket);
+        room.handleDisconnect(this.io, socket);
         this.playerRoomId.delete(socket.id);
     
         if (room.getPlayers().length === 0) {

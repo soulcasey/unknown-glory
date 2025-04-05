@@ -9,7 +9,6 @@ enum GameStep {
     Init,
     Select,
     Execute,
-    Result,
     End,
 }
 
@@ -49,49 +48,35 @@ export default class GameRoom {
         return this.players;
     }
 
-    handleDisconnect(socket: Socket) {
+    async handleDisconnect(io: Server, socket: Socket) {
         this.players = this.players.filter(player => player.id !== socket.id);
         this.players.forEach((player, index) => {
             
-            player.resetStats()
-            player.position = index === 0 ? this.position1 : this.position2;
+            player.resetStats();
+            player.position = index === 0 ? { ...this.position1 } : { ...this.position2 };
+
         });
 
         this.step = GameStep.Init;
+
+        
+        await this.sendAnnoucement(io, "someone left....");
+        io.in(this.roomId).emit("wait");
     }
 
     async handleJoinRoom(io: Server, socket: Socket, name: string, type: CharacterType) {
         if (this.step !== GameStep.Init) return;
         const newPlayer = new Player(socket.id, name, type);
-        newPlayer.position = this.players.length === 0 ? this.position1 : this.position2
+        newPlayer.position = this.players.length === 0 ? { ...this.position1 } : { ...this.position2 };
         this.players.push(newPlayer);
         socket.join(this.roomId);
 
         if (this.players.length === this.maxPlayerCount) {
             io.in(this.roomId).emit("unwait");
-            
-            this.step = GameStep.Select;
-            this.round ++;
-            // io.in(this.roomId).emit("gameStep", { step: this.step });
-
-            this.setPriority(io);
-            this.sendRoomData(io)
-
-            await this.sendAnnoucement(io,
-                "Game Start!\n\n" +
-                this.players[0].name + " vs " + this.players[1].name
-            )
-
-            await this.sendAnnoucement(io,
-                "Round " + this.round + "\n\n" +
-                "Priority player: " + this.players[this.priorityIndex].name
-            )
-            
-            this.players.forEach(player => this.sendRandomCards(io, player));
+            this.gameStart(io);
         }
         else {
             this.sendRoomData(io)
-
             io.to(newPlayer.id).emit("wait");
         }
     }
@@ -145,6 +130,60 @@ export default class GameRoom {
         this.sendRandomCards(io, this.getPlayer(socket));
     }
 
+    private async gameStart(io: Server) {
+        this.step = GameStep.Select;
+        this.round = 1;
+
+        this.setPriority(io);
+        this.sendRoomData(io)
+
+        await this.sendAnnoucement(io,
+            "Game Start!\n\n" +
+            this.players[0].name + " vs " + this.players[1].name
+        )
+
+        await this.sendAnnoucement(io,
+            "Round " + this.round + "\n\n" +
+            "Priority Player: " + this.players[this.priorityIndex].name
+        )
+        
+        this.players.forEach(player => this.sendRandomCards(io, player));
+    }
+
+    private async roundStart(io: Server) {
+        this.step = GameStep.Select;
+        this.round ++;
+        
+        const alivePlayers = this.players.filter(player => player.health > 0);
+
+        alivePlayers.forEach(player => {
+            if (player.energy <= this.maxEnergy) {
+                player.energy++;
+            }
+            
+            if (player.reroll <= this.maxReroll) {
+                player.reroll += 0.5;
+            }
+        })
+
+        this.setPriority(io);
+        this.sendRoomData(io)
+        
+        await this.sendAnnoucement(io,
+            "Round " + this.round + "\n\n" +
+            "Priority player: " + this.players[this.priorityIndex].name
+        )
+
+        this.players.forEach(player => this.sendRandomCards(io, player));
+    }
+
+    private setPriority(io: Server) {
+        const alivePlayers = this.players.filter(player => player.health > 0);
+        const randomAliveIndex = Math.floor(Math.random() * alivePlayers.length);
+        const priorityPlayer = alivePlayers[randomAliveIndex];
+        this.priorityIndex = this.players.findIndex(p => p.name === priorityPlayer.name);
+    }
+
     private sendRoomData(io: Server) {
         const roomData: RoomData = {
             roomId: this.roomId,
@@ -162,12 +201,6 @@ export default class GameRoom {
         };
 
         io.in(this.roomId).emit("roomData", roomData);
-    }
-
-    private setPriority(io: Server) {
-        this.priorityIndex = Math.floor(Math.random() * this.players.length);
-        const priorityPlayer = this.players[this.priorityIndex].name;
-        io.in(this.roomId).emit("setPriority", { priorityPlayer });
     }
 
     private sendRandomCards(io: Server, player: Player) {
@@ -310,37 +343,24 @@ export default class GameRoom {
 
     private async evaluateResults(io: Server) {
         const alivePlayers = this.players.filter(player => player.health > 0);
-        // const deadPlayers = this.players.filter(player => player.health <= 0);
 
         if (alivePlayers.length <= 1) {
             this.step = GameStep.End;
-            io.in(this.roomId).emit("end", { winner: alivePlayers.map(player => player.name) });
-        }
-        else {
-            this.step = GameStep.Result;
 
-            alivePlayers.forEach(player => {
-                if (player.energy <= this.maxEnergy) {
-                    player.energy++;
-                }
-                
-                if (player.reroll <= this.maxReroll) {
-                    player.reroll += 0.5;
-                }
-            })
-
-
-            this.step = GameStep.Select;
-            this.round ++;
-            this.setPriority(io);
-            this.sendRoomData(io)
-            
             await this.sendAnnoucement(io,
-                "Round " + this.round + "\n\n" +
-                "Priority player: " + this.players[this.priorityIndex].name
+                "Game Over!\n\n" +
+                "Winner: " + alivePlayers.map(player => player.name)
             )
 
-            this.players.forEach(player => this.sendRandomCards(io, player));
+            this.players.forEach((player, index) => {
+                player.resetStats()
+                player.position = index === 0 ? { ...this.position1 } : { ...this.position2 };
+            });
+
+            this.gameStart(io);
+        }
+        else {
+            this.roundStart(io);
         }
     }
 
