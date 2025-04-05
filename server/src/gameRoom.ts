@@ -226,6 +226,8 @@ export default class GameRoom {
         let opponentIndex = playerIndex === 1 ? 0 : 1;
 
         while (true) {
+            if (this.step !== GameStep.Execute) return;
+
             const player = this.players[playerIndex];
             const cardKey = player.chosenCards.shift()
             if (cardKey === undefined) break;

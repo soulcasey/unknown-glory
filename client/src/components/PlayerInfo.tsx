@@ -24,17 +24,17 @@ function PlayerDetails({ player }: { player: RoomData["players"][0] }) {
         if (player.health !== prevHealth) {
             setHealthChange(player.health - (prevHealth || 0));
             setPrevHealth(player.health);
-            setTimeout(() => setHealthChange(null), 2000);  // Hide after 1 second
+            setTimeout(() => setHealthChange(null), 1500);
         }
         if (player.energy !== prevEnergy) {
             setEnergyChange(player.energy - (prevEnergy || 0));
             setPrevEnergy(player.energy);
-            setTimeout(() => setEnergyChange(null), 2000);  // Hide after 1 second
+            setTimeout(() => setEnergyChange(null), 1500);
         }
         if (player.block !== prevBlock) {
             setBlockChange(player.block - (prevBlock || 0));
             setPrevBlock(player.block);
-            setTimeout(() => setBlockChange(null), 2000);  // Hide after 1 second
+            setTimeout(() => setBlockChange(null), 1500); 
         }
     }, [player.health, player.energy, player.block]);
 
