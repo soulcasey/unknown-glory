@@ -51,3 +51,19 @@ export interface CardActionData {
 
     hitZones: Vector2[];
 }
+
+export interface CardSelectionData {
+    player: {
+        name: string;
+        reroll: number;
+    };
+
+    cards: {
+        key: string;
+        name: string;
+        type: CardType;
+        value: number;
+        cost: number;
+        zone: Vector2[];
+    }[];
+}

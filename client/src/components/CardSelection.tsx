@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { Socket } from "socket.io-client";
+import { CardSelectionData, CardType, Vector2 } from "../dto";
 
 interface CardSelectionProps {
+    cardSelectionData: CardSelectionData | null;
     socket: Socket;
-    cards: string[];
-    reroll: number;
     onClose: () => void;
 }
 
-export default function CardSelection({ socket, cards, reroll, onClose }: CardSelectionProps) {
+export default function CardSelection({ cardSelectionData, socket, onClose }: CardSelectionProps) {
     const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
     const [visible, setVisible] = useState(false); // for fade-in/out animation
 
@@ -42,16 +42,60 @@ export default function CardSelection({ socket, cards, reroll, onClose }: CardSe
         if (selectedIndices.length !== 3) return;
         
         // Convert selected indices to card names
-        const selectedCards = selectedIndices.map(index => cards[index]);
+        const selectedCards = selectedIndices.map(index => cards[index].key);
         socket.emit("selectCards", selectedCards);
     };
 
     const closeWithFadeOut = () => {
         setVisible(false);
-        setTimeout(() => {
-            onClose();
-        }, 300); // Matches the fade-out duration
+        setTimeout(onClose, 300);
     };
+
+    const getEmoji = (type: CardType) => {
+        switch (type) {
+            case CardType.Move: return "🏃";
+            case CardType.Block: return "🛡️";
+            case CardType.Attack: return "⚔️";
+            default: return "❓";
+        }
+    };
+
+    const renderAttackGrid = (zone?: Vector2[]) => {
+        if (!zone || !zone.length) return null;
+    
+        const xs = zone.map(v => v.x).concat(0); // Include origin
+        const ys = zone.map(v => v.y).concat(0); // Include origin
+        const [minX, maxX] = [Math.min(...xs), Math.max(...xs)];
+        const [minY, maxY] = [Math.min(...ys), Math.max(...ys)];
+    
+        const grid = [];
+        for (let y = maxY; y >= minY; y--) {
+            const row = [];
+            for (let x = minX; x <= maxX; x++) {
+                const isOrigin = x === 0 && y === 0;
+                const isZone = zone.some(vec => vec.x === x && vec.y === y);
+                row.push(
+                    <div
+                        key={`${x},${y}`}
+                        className={`w-3 h-3 border text-xs flex items-center justify-center
+                            ${isOrigin ? "bg-green-500" :
+                              isZone ? "bg-red-500" : "bg-gray-500"}`}
+                    />
+                );
+            }
+            grid.push(<div key={y} className="flex">{row}</div>);
+        }
+    
+        return (
+            <div className="mt-2 inline-block">
+                {grid}
+            </div>
+        );
+    };
+    
+
+    const cards = cardSelectionData?.cards ?? [];
+    const reroll = cardSelectionData?.player.reroll ?? 0;
 
     return (
         <>
@@ -106,16 +150,22 @@ export default function CardSelection({ socket, cards, reroll, onClose }: CardSe
                             <button
                                 key={index}
                                 onClick={() => toggleCardSelection(index)}
-                                className={`relative flex justify-center items-center text-white rounded-md transition duration-200 ${
+                                className={`relative flex flex-col justify-center items-center text-white rounded-md p-2 transition duration-200 ${
                                     isSelected ? "bg-blue-800" : "bg-blue-600 hover:bg-blue-700"
                                 }`}
                                 style={{
                                     aspectRatio: "3 / 4",
                                     width: "15%",
-                                    position: "relative",
                                 }}
+                                type="button"
                             >
-                                {card}
+                                <div className="text-3xl mb-1">{getEmoji(card.type)}</div>
+                                <div className="font-bold text-center text-sm">{card.name}</div>
+                                <div className="text-xs text-gray-300 mb-1">Value: {card.value}</div>
+                                <div className="text-xs text-gray-300 mb-1">Cost: {card.cost}</div>
+
+                                {card.type === CardType.Attack && renderAttackGrid(card.zone)}
+
                                 {order && (
                                     <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-white text-black flex items-center justify-center text-sm font-bold">
                                         {order}

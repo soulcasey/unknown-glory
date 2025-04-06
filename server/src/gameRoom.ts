@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import Player from "./player";
 import { Knight, Archer, Rogue, Character } from "./character";
 import Card from "./card";
-import { Vector2, CardActionData, RoomData, CharacterType, CardType } from "./dto";
+import { Vector2, CardActionData, CardSelectionData, RoomData, CharacterType, CardType } from "./dto";
 import { blob } from "stream/consumers";
 
 enum GameStep {
@@ -82,6 +82,10 @@ export default class GameRoom {
     }
 
     async handleSelectCards(io: Server, socket: Socket, cards: string[]) {
+
+        console.log(cards);
+        console.log(this.getPlayer(socket).currentCards);
+
         if (this.step !== GameStep.Select) return;
         if (cards.length !== this.selectCardCount) return;
 
@@ -206,18 +210,36 @@ export default class GameRoom {
     private sendRandomCards(io: Server, player: Player) {
         player.currentCards = [];
         const availableIndices = [...Array(player.character.cards.length).keys()];
+        const currentIndicies = [];
 
         while (player.currentCards.length < this.randomCardCount) {
             const randomIndex = Math.floor(Math.random() * availableIndices.length);
-            const card = player.character.cards[availableIndices[randomIndex]]
+            const cardIndex = availableIndices[randomIndex];
+            currentIndicies.push(cardIndex);
+            const card = player.character.cards[cardIndex]
             player.currentCards.push(card.key);
             availableIndices.splice(randomIndex, 1); // Remove chosen index to avoid duplicates
         }
 
-        io.to(player.id).emit("cards", {
-            cards: player.currentCards,
-            reroll: player.reroll
-        });
+        const cardSelectionData: CardSelectionData = {
+            player: {
+                name: player.name,
+                reroll: player.reroll,
+            },
+            cards: currentIndicies.map((index) => {
+                const card = player.character.cards[index];
+                return {
+                    key: card.key,
+                    name: card.name,
+                    type: card.type,
+                    value: card.value,
+                    cost: card.cost,
+                    zone: card.zones,
+                };
+            }),
+        }
+
+        io.to(player.id).emit("cardSelection", cardSelectionData)
     }
 
     // If multiple opponent feature gets implemented, directional casting needs to be considered

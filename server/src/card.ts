@@ -2,6 +2,7 @@ import { Vector2, CardType } from "./dto";
 
 
 // Card class definition
+// TODO: move this to dto
 export default class Card {
     readonly key: string;
     readonly name: string

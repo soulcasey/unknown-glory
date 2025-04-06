@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import io from "socket.io-client";
-import { RoomData, CardActionData, CardType } from "./dto";
+import { RoomData, CardActionData, CardType, CardSelectionData } from "./dto";
 import CardSelection from "./components/CardSelection";
 import Character from "./components/Character";
 import Wait from "./components/Wait";
@@ -13,9 +13,8 @@ const socket = io("http://localhost:3000");
 export default function Game() {
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false);
-    const [cards, setCards] = useState<string[]>([]);
+    const [cards, setCards] = useState<CardSelectionData | null>(null);
     const [roomData, setRoomData] = useState<RoomData | null>(null);
-    const [reroll, setReroll] = useState<number>(0);
     const [waiting, setWaiting] = useState(false);
     const [announcement, setAnnouncement] = useState<string>("");
     const [cardAction, setCardAction] = useState<CardActionData | null>();
@@ -25,14 +24,13 @@ export default function Game() {
             setError(message);
         });
 
-        socket.on("cards", ({ cards, reroll }: { cards: string[]; reroll: number }) => {
-            setCards(cards);
-            setReroll(reroll);
+        socket.on("cardSelection", (cardSelectionData: CardSelectionData) => {
+            setCards(cardSelectionData);
             setShowCardSelection(true);
         });
         
         socket.on("cardsReceived", () => {
-            setCards([])
+            setCards(null)
             setShowCardSelection(false);
         })
 
@@ -81,10 +79,9 @@ export default function Game() {
 
             {showCardSelection && (
                 <CardSelection
+                    cardSelectionData={cards}
                     socket={socket}
-                    cards={cards}
                     onClose={() => setShowCardSelection(false)}
-                    reroll={reroll}
                 />
             )}
 
@@ -114,9 +111,9 @@ export default function Game() {
                             <h2 className="text-xl">Room: {roomData.roomId}</h2>
                             <button
                                 onClick={() => setShowCardSelection(true)}
-                                disabled={cards.length === 0}
+                                disabled={cards === null}
                                 className={`px-4 py-2 rounded-md mt-4 transition-all duration-300 ${
-                                    cards.length === 0
+                                    cards === null
                                         ? "bg-gray-500 cursor-not-allowed"
                                         : "bg-blue-600 hover:bg-blue-700"
                                 }`}
