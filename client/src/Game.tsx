@@ -11,6 +11,7 @@ import PlayerInfo from "./components/PlayerInfo";
 const socket = io(import.meta.env.VITE_SOCKET_URL);
 
 export default function Game() {
+    const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState("");
     const [showCardSelection, setShowCardSelection] = useState(false);
     const [cards, setCards] = useState<CardSelectionData | null>(null);
@@ -20,6 +21,9 @@ export default function Game() {
     const [cardAction, setCardAction] = useState<CardActionData | null>();
 
     useEffect(() => {
+        socket.on("connect", () => setIsConnected(true));
+        socket.on("disconnect", () => setIsConnected(false));
+
         socket.on("sendError", (message: string) => {
             setError(message);
         });
@@ -57,6 +61,8 @@ export default function Game() {
             socket.off("announcement");
             socket.off("cardsReceived");
             socket.off("cardAction");
+            socket.off("connect");
+            socket.off("disconnect");
         };
     }, []);
 
@@ -99,6 +105,7 @@ export default function Game() {
                     onError={setError}
                     onSubmit={() => setError("")}
                     socket={socket}
+                    isConnected={isConnected}
                 />
             ) : (
                 <>

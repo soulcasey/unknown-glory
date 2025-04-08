@@ -1,17 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CharacterType, JoinRoomData } from "../dto";
 import { Socket } from "socket.io-client";
 
 interface LoginProps {
-    socket: Socket
+    socket: Socket;
     onSubmit: () => void;
     onError: (message: string) => void;
+    isConnected: boolean;
 }
 
-export default function Login({ socket, onSubmit, onError }: LoginProps) {
+export default function Login({ socket, onSubmit, onError, isConnected }: LoginProps) {
     const [roomId, setRoomId] = useState("");
     const [playerName, setPlayerName] = useState("");
     const [characterType, setCharacterType] = useState<CharacterType>(CharacterType.Knight);
+    const [dotCount, setDotCount] = useState(0);
+
+    useEffect(() => {
+        if (!isConnected) {
+            const interval = setInterval(() => {
+                setDotCount((prev) => (prev + 1) % 4);
+            }, 500); // every half second
+
+            return () => clearInterval(interval);
+        }
+    }, [isConnected]);
 
     const handleJoinRoom = () => {
         if (roomId.trim() && playerName.trim()) {
@@ -20,11 +32,10 @@ export default function Login({ socket, onSubmit, onError }: LoginProps) {
                 name: playerName,
                 characterType,
             };
-            
+
             onSubmit?.();
             socket.emit("joinRoom", joinRoomData);
-        }
-        else {
+        } else {
             const errorMsg = "Please enter Room ID, Name, and select a Character Class.";
             onError?.(errorMsg);
         }
@@ -55,17 +66,22 @@ export default function Login({ socket, onSubmit, onError }: LoginProps) {
                 className="p-2 text-white rounded-md border bg-gray-700 border-gray-400"
             >
                 {Object.values(CharacterType).map((type) => (
-                <option key={type} value={type}>
-                    {type}
-                </option>
+                    <option key={type} value={type}>
+                        {type}
+                    </option>
                 ))}
             </select>
 
             <button
                 onClick={handleJoinRoom}
-                className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700"
+                disabled={!isConnected}
+                className={`w-30 px-4 py-2 rounded-md ${
+                    isConnected
+                        ? "text-center bg-blue-600 hover:bg-blue-700"
+                        : "text-left bg-gray-500 cursor-not-allowed"
+                }`}
             >
-                Join Room
+                {isConnected ? "Enter Room" : `Connecting${".".repeat(dotCount)}`}
             </button>
         </div>
     );
