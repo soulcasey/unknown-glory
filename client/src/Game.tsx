@@ -8,7 +8,7 @@ import Announcement from "./components/Announcement";
 import Login from "./components/Login";
 import PlayerInfo from "./components/PlayerInfo";
 
-const socket = io("http://localhost:3000");
+const socket = io(import.meta.env.VITE_SOCKET_URL);
 
 export default function Game() {
     const [error, setError] = useState("");
