@@ -30,8 +30,8 @@ export default class GameRoom {
 
     private readonly maxPlayerCount = 2;
 
-    private readonly maxEnergy = 4;
-    private readonly maxReroll = 2;
+    private readonly maxEnergy = 5;
+    private readonly maxReroll = 5;
 
 
     private priorityIndex: number;
@@ -49,6 +49,8 @@ export default class GameRoom {
     }
 
     async handleDisconnect(io: Server, socket: Socket) {
+        this.step = GameStep.Init;
+
         this.players = this.players.filter(player => player.id !== socket.id);
         this.players.forEach((player, index) => {
             
@@ -57,9 +59,7 @@ export default class GameRoom {
 
         });
 
-        this.step = GameStep.Init;
-
-        
+        this.sendRoomData(io);
         await this.sendAnnoucement(io, "someone left....");
         io.in(this.roomId).emit("wait");
     }
@@ -166,7 +166,7 @@ export default class GameRoom {
             }
             
             if (player.reroll <= this.maxReroll) {
-                player.reroll += 0.5;
+                player.reroll++;
             }
         })
 
@@ -248,7 +248,7 @@ export default class GameRoom {
         let opponentIndex = playerIndex === 1 ? 0 : 1;
 
         while (true) {
-            if (this.step !== GameStep.Action) return;
+            if (this.step !== GameStep.Action) return; // Check every iteration in case of disconnection
 
             const player = this.players[playerIndex];
             const cardKey = player.chosenCards.shift()

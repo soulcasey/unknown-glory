@@ -25,8 +25,8 @@ export default class Player {
 
     resetStats() {
         this.health = this.character.maxHealth;
-        this.reroll = 1;
-        this.energy = 1;
+        this.reroll = 2;
+        this.energy = 2;
         this.block = 0;
 
         this.currentCards = []
